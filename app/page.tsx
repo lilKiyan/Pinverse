@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
-import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useQueryClient, useQuery } from '@tanstack/react-query'
 import PinCard from './components/PinCard'
 import { FiAlertCircle, FiImage, FiCheckCircle } from 'react-icons/fi'
 import Spinner from './components/Spinner'
-import { CATEGORIES } from '@/lib/categories'
-import Link from 'next/link'         
-import { FiTag } from 'react-icons/fi' 
+import Link from 'next/link'
+import { FiTag } from 'react-icons/fi'
+import { getCategoryIcon } from '@/lib/categories'
 
 const LIMIT = 12
 
@@ -15,6 +15,18 @@ export default function Home() {
   const sentinelRef = useRef<HTMLDivElement | null>(null)
   const queryClient = useQueryClient()
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [category, setCategory] = useState('other')
+
+  const { data: categoriesData } = useQuery<{ categories: { slug: string; name: string; icon: string; color: string }[] }>({
+    queryKey: ['categories-all'],
+    queryFn: async () => {
+      const res = await fetch('/api/categories')
+      if (!res.ok) throw new Error('خطا')
+      return res.json()
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+  const categories = categoriesData?.categories ?? []
 
   const {
     data,
@@ -97,7 +109,7 @@ export default function Home() {
 
   return (
     <main className="p-4 md:p-6">
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 pt-4 scrollbar-none md:px-0 px-1">
+      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 pt-4 scrollbar-none px-1">
         <button
           onClick={() => handleCategoryChange(null)}
           className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all
@@ -109,9 +121,9 @@ export default function Home() {
           همه
         </button>
 
-        {CATEGORIES.map((cat) => {
-          const isActive = activeCategory === cat.slug
-          const Icon = cat.iconComponent
+        {categories.map((cat) => {
+          const isActive = category === cat.slug
+          const Icon = getCategoryIcon(cat.icon)
           return (
             <button
               key={cat.slug}
