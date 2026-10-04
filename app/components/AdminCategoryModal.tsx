@@ -225,7 +225,7 @@ export default function AdminCategoryModal({
 
                                 {/* رنگ‌های پیشنهادی سریع */}
                                 <div className="flex items-center gap-1.5 flex-1 flex-wrap">
-                                    {['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'].map((c) => (
+                                    {['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b','#311B92','#FFEB3B','#F48FB1'].map((c) => (
                                         <button
                                             key={c}
                                             type="button"

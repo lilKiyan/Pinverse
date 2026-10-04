@@ -36,18 +36,18 @@ const ROLES = [
 
 
 const CATEGORIES_SEED = [
-    { slug: 'art', name: 'هنر و طراحی', icon: '🎨', color: '#8b5cf6', sortOrder: 1 },
-    { slug: 'cooking', name: 'آشپزی', icon: '🍳', color: '#f59e0b', sortOrder: 2 },
-    { slug: 'travel', name: 'سفر و مکان‌ها', icon: '✈️', color: '#0ea5e9', sortOrder: 3 },
-    { slug: 'technology', name: 'تکنولوژی', icon: '💻', color: '#3b82f6', sortOrder: 4 },
-    { slug: 'fashion', name: 'مد و استایل', icon: '👗', color: '#ec4899', sortOrder: 5 },
-    { slug: 'sports', name: 'ورزش و تناسب', icon: '🏋️', color: '#22c55e', sortOrder: 6 },
-    { slug: 'home', name: 'خانه و دکور', icon: '🏠', color: '#a855f7', sortOrder: 7 },
-    { slug: 'garden', name: 'گیاهان و باغبانی', icon: '🌱', color: '#10b981', sortOrder: 8 },
-    { slug: 'photography', name: 'عکاسی', icon: '📷', color: '#64748b', sortOrder: 9 },
-    { slug: 'ideas', name: 'ایده‌های خلاقانه', icon: '💡', color: '#eab308', sortOrder: 10 },
-    { slug: 'music', name: 'موسیقی', icon: '🎵', color: '#f43f5e', sortOrder: 11 },
-    { slug: 'other', name: 'سایر', icon: '🏷️', color: '#9ca3af', sortOrder: 99 },
+    { slug: 'art', name: 'هنر و طراحی', icon: 'art', color: '#8b5cf6', sortOrder: 1 },
+    { slug: 'cooking', name: 'آشپزی', icon: 'cooking', color: '#f59e0b', sortOrder: 2 },
+    { slug: 'travel', name: 'سفر و مکان‌ها', icon: 'travel', color: '#0ea5e9', sortOrder: 3 },
+    { slug: 'technology', name: 'تکنولوژی', icon: 'technology', color: '#3b82f6', sortOrder: 4 },
+    { slug: 'fashion', name: 'مد و استایل', icon: 'fashion', color: '#ec4899', sortOrder: 5 },
+    { slug: 'sports', name: 'ورزش و تناسب', icon: 'sports', color: '#22c55e', sortOrder: 6 },
+    { slug: 'home', name: 'خانه و دکور', icon: 'home', color: '#a855f7', sortOrder: 7 },
+    { slug: 'garden', name: 'گیاهان و باغبانی', icon: 'garden', color: '#10b981', sortOrder: 8 },
+    { slug: 'photography', name: 'عکاسی', icon: 'photography', color: '#64748b', sortOrder: 9 },
+    { slug: 'ideas', name: 'ایده‌های خلاقانه', icon: 'ideas', color: '#eab308', sortOrder: 10 },
+    { slug: 'music', name: 'موسیقی', icon: 'music', color: '#f43f5e', sortOrder: 11 },
+    { slug: 'other', name: 'سایر', icon: 'other', color: '#9ca3af', sortOrder: 99 },
 ]
 
 

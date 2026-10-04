@@ -1,7 +1,8 @@
 "use client"
 
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import PinCard from '@/app/components/PinCard'
 import Image from 'next/image'
 import { useAuthStore } from '@/lib/authStore'
@@ -19,6 +20,10 @@ import {
     FiSettings,
 } from 'react-icons/fi'
 
+// ═══════════ تایپ‌ها ═══════════
+
+type Tab = 'followers' | 'following'
+
 type UserProfile = {
     id: string
     name: string
@@ -35,12 +40,30 @@ type ProfileResponse = {
     pins: any[]
 }
 
+// ✅ کامپوننت اصلی — wrapped در Suspense (برای useSearchParams)
 export default function UserProfilePage() {
+    return (
+        <Suspense
+            fallback={
+                <main dir="rtl" className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50">
+                    <Spinner size="lg" />
+                </main>
+            }
+        >
+            <UserProfileContent />
+        </Suspense>
+    )
+}
+
+// ✅ بدنه‌ی صفحه
+function UserProfileContent() {
     const { id } = useParams<{ id: string }>()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const initialTab = searchParams.get('tab') === 'following' ? 'following' : 'followers'
+    const [tab, setTab] = useState<Tab>(initialTab)
     const { user: currentUser } = useAuthStore()
     const queryClient = useQueryClient()
-
 
     // ── Query: اطلاعات کاربر + پین‌ها ──
     const {
@@ -56,7 +79,7 @@ export default function UserProfilePage() {
             return res.json()
         },
         enabled: !!id,
-        staleTime: 60 * 1000, // ۱ دقیقه
+        staleTime: 60 * 1000,
     })
 
     const profileUser = data?.user
@@ -70,7 +93,6 @@ export default function UserProfilePage() {
             return res.json()
         },
         onSuccess: (resData: { isFollowing: boolean; followersCount: number }) => {
-            // آپدیت فوری cache به جای fetch مجدد
             queryClient.setQueryData<ProfileResponse>(['user', id], (old) => {
                 if (!old) return old
                 return {
@@ -183,12 +205,15 @@ export default function UserProfilePage() {
                         )}
                     </div>
 
+                    {/* ═══ آمار — پین‌ها عادی، فالوور/دنبال‌شونده لینک به connections ═══ */}
                     <div className="mt-6 flex items-center justify-center gap-5 sm:gap-7">
+
+                        {/* ── پین‌ها — بدون لینک (فقط آمار) ── */}
                         <div className="group/stat flex flex-col items-center gap-1 cursor-default">
                             <div className="flex items-center gap-1.5">
                                 <FiGrid className="w-3.5 h-3.5 text-red-400/50 transition-all duration-300 group-hover/stat:text-red-500 group-hover/stat:scale-110" />
                                 <span className="text-lg sm:text-xl font-black tabular-nums leading-none bg-gradient-to-br from-red-500 to-orange-400 bg-clip-text text-transparent">
-                                    {pins.length}
+                                    {pins.length.toLocaleString('fa-IR')}
                                 </span>
                             </div>
                             <span className="text-[11px] text-gray-400 font-semibold">پین</span>
@@ -197,23 +222,31 @@ export default function UserProfilePage() {
 
                         <span className="w-1 h-1 rounded-full bg-gray-200" />
 
-                        <div className="group/stat flex flex-col items-center gap-1 cursor-default">
+                        {/* ── دنبال‌کننده‌ها — کلیک → connections ── */}
+                        <Link
+                            href={`/user/${id}/connections?tab=followers`}
+                            className="group/stat flex flex-col items-center gap-1 no-underline"
+                        >
                             <span className="text-lg sm:text-xl font-black tabular-nums leading-none bg-gradient-to-br from-fuchsia-500 to-purple-400 bg-clip-text text-transparent">
-                                {profileUser.followersCount}
+                                {profileUser.followersCount.toLocaleString('fa-IR')}
                             </span>
                             <span className="text-[11px] text-gray-400 font-semibold">دنبال‌کننده</span>
                             <span className="h-0.5 w-0 rounded-full bg-gradient-to-l from-fuchsia-500 to-purple-400 opacity-0 group-hover/stat:opacity-100 group-hover/stat:w-full transition-all duration-300" />
-                        </div>
+                        </Link>
 
                         <span className="w-1 h-1 rounded-full bg-gray-200" />
 
-                        <div className="group/stat flex flex-col items-center gap-1 cursor-default">
+                        {/* ── دنبال‌شده‌ها — کلیک → connections ── */}
+                        <Link
+                            href={`/user/${id}/connections?tab=following`}
+                            className="group/stat flex flex-col items-center gap-1 no-underline"
+                        >
                             <span className="text-lg sm:text-xl font-black tabular-nums leading-none bg-gradient-to-br from-blue-500 to-cyan-400 bg-clip-text text-transparent">
-                                {profileUser.followingCount}
+                                {profileUser.followingCount.toLocaleString('fa-IR')}
                             </span>
                             <span className="text-[11px] text-gray-400 font-semibold">دنبال‌شونده</span>
                             <span className="h-0.5 w-0 rounded-full bg-gradient-to-l from-blue-500 to-cyan-400 opacity-0 group-hover/stat:opacity-100 group-hover/stat:w-full transition-all duration-300" />
-                        </div>
+                        </Link>
                     </div>
 
                     {/* دکمه اکشن */}
@@ -260,7 +293,7 @@ export default function UserProfilePage() {
             </div>
 
             {/* ═══════════ پین‌های کاربر ═══════════ */}
-            <div className="max-w-[1400px] mx-auto px-4 sm:px-8 mt-12 mb-15">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-8 mt-12 mb-16">
                 <div className="flex items-center gap-3 mb-6">
                     <h2 className="flex items-center gap-2 font-bold text-gray-900 text-sm shrink-0">
                         <span className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">

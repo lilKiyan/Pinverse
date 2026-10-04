@@ -10,6 +10,7 @@ export async function GET() {
                 id: true,
                 slug: true,
                 name: true,
+                 icon: true,
                 color: true,
                 _count: {
                     select: { pins: true }

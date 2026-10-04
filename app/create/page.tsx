@@ -3,10 +3,10 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { FiUpload, FiImage, FiType, FiAlignLeft, FiAlertCircle, FiX, FiFile, FiCheckCircle, FiTag } from 'react-icons/fi'
 import { compressImage } from '@/lib/imageCompress'
-import { CATEGORIES } from '@/lib/categories'
+import { getCategoryIcon } from '@/lib/categories'
 
 type CreatePinInput = {
     title: string
@@ -129,6 +129,17 @@ export default function CreatePage() {
         if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} کیلوبایت`
         return `${(bytes / (1024 * 1024)).toFixed(1)} مگابایت`
     }
+
+    const { data: categoriesData } = useQuery<{ categories: { slug: string; name: string; icon: string; color: string }[] }>({
+        queryKey: ['categories-all'],
+        queryFn: async () => {
+            const res = await fetch('/api/categories')
+            if (!res.ok) throw new Error('خطا')
+            return res.json()
+        },
+        staleTime: 5 * 60 * 1000,
+    })
+    const categories = categoriesData?.categories ?? []
 
     const isFormValid = title.trim() && selectedFile && dimensions && !isPreparing
     const loading = createPinMutation.isPending
@@ -343,9 +354,9 @@ export default function CreatePage() {
                                     </label>
 
                                     <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5">
-                                        {CATEGORIES.map((cat) => {
+                                        {categories.map((cat) => {
                                             const isActive = category === cat.slug
-                                            const Icon = cat.iconComponent
+                                            const Icon = getCategoryIcon(cat.icon)
 
                                             return (
                                                 <button
