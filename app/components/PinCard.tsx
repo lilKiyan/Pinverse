@@ -10,7 +10,7 @@ import type { Board } from './SaveToBoardDropdown'
 import type { OptionKey } from './PinOptionsMenu'
 import type { PinDTO } from '../types/pin'
 import type { Board as BoardDTO } from '../types/board'
-import { getCategoryMeta } from '@/lib/categories'
+import { getCategoryIcon } from '@/lib/categories'
 
 const ReportPinModal = dynamic(() => import('./ReportPinModal'), { ssr: false })
 const SharePinModal = dynamic(() => import('./SharePinModal'), { ssr: false })
@@ -80,7 +80,8 @@ const PinCard = ({
     const [isReportModalOpen, setIsReportModalOpen] = useState(false)
     const [isUnreporting, setIsUnreporting] = useState(false)
     const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-    const categoryMeta = getCategoryMeta(pin.category?.slug)
+    const category = pin.category ?? null
+    const CategoryIcon = category ? getCategoryIcon(category.icon) : null
 
     const { data: boardsRaw = [], isLoading: isLoadingBoards } = useQuery<BoardDTO[]>({
         queryKey: ['boards'],
@@ -322,7 +323,8 @@ const PinCard = ({
                             priority={priority}
                         />
 
-                        {categoryMeta && (
+                        {/* 🏷️ badge دسته — از داده‌ی API */}
+                        {category && CategoryIcon && (
                             <span
                                 className="absolute top-2 right-2 z-10
                                     inline-flex items-center gap-1
@@ -333,11 +335,8 @@ const PinCard = ({
                                     transition-all duration-200
                                     group-hover:opacity-0"
                             >
-                                <span
-                                    className="w-1.5 h-1.5 rounded-full"
-                                    style={{ backgroundColor: categoryMeta.color }}
-                                />
-                                {categoryMeta.name}
+                                <CategoryIcon className="w-3 h-3" />
+                                {category.name}
                             </span>
                         )}
                     </div>

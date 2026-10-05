@@ -49,7 +49,7 @@ export async function GET(request: Request) {
                     saves: {
                         include: { board: true },
                     },
-                    category: {
+                    category: {                       
                         select: { slug: true, name: true, icon: true, color: true },
                     },
 
