@@ -133,13 +133,23 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json()
-        const { title, description, imageUrl, imageWidth, imageHeight, boardId, category } = body
+        const { title, description, imageUrl, imageWidth, imageHeight, boardId, category } = body   // ✅ category اضافه
 
         if (!title || !imageUrl) {
             return NextResponse.json(
                 { error: 'عنوان و تصویر الزامی است' },
                 { status: 400 }
             )
+        }
+
+        const titleModeration = moderateText(title.trim())
+        if (!titleModeration.ok) {
+            return NextResponse.json({ error: `عنوان: ${titleModeration.reason}` }, { status: 400 })
+        }
+
+        const descriptionModeration = moderateText(description?.trim() || '')
+        if (!descriptionModeration.ok) {
+            return NextResponse.json({ error: `توضیحات: ${descriptionModeration.reason}` }, { status: 400 })
         }
 
         const requestedCategory = category || 'other'
@@ -155,16 +165,6 @@ export async function POST(request: Request) {
                 select: { id: true },
             }))?.id ?? null
 
-        const titleModeration = moderateText(title.trim())
-        if (!titleModeration.ok) {
-            return NextResponse.json({ error: `عنوان: ${titleModeration.reason}` }, { status: 400 })
-        }
-
-        const descriptionModeration = moderateText(description?.trim() || '')
-        if (!descriptionModeration.ok) {
-            return NextResponse.json({ error: `توضیحات: ${descriptionModeration.reason}` }, { status: 400 })
-        }
-
         const newPin = await prisma.pin.create({
             data: {
                 title: title.trim(),
@@ -174,7 +174,7 @@ export async function POST(request: Request) {
                 imageWidth: imageWidth ?? null,
                 imageHeight: imageHeight ?? null,
                 boardId: boardId || null,
-                categoryId,
+                categoryId,  
             },
         })
 
