@@ -4,7 +4,7 @@ import { useState, useMemo, Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import Spinner from '@/app/components/Spinner'
 import { FiArrowRight, FiSearch, FiUserPlus, FiCheck, FiUsers, FiAtSign } from 'react-icons/fi'
 import { useAuthStore } from '@/lib/authStore'
@@ -31,6 +31,8 @@ type ConnectionsPage = {
 }
 
 type Tab = 'followers' | 'following'
+
+type ConnectionsCache = InfiniteData<ConnectionsPage>
 
 // ═══════════ wrapper با Suspense ═══════════
 
@@ -106,16 +108,19 @@ function ConnectionsContent() {
             return res.json() as Promise<{ isFollowing: boolean; followersCount: number }>
         },
         onSuccess: (data, userId) => {
-            queryClient.setQueryData<ConnectionsPage[]>(
+            queryClient.setQueryData<ConnectionsCache>(
                 ['connections', id, tab],
                 (old) => {
                     if (!old) return old
-                    return old.map((page) => ({
-                        ...page,
-                        users: page.users.map((u) =>
-                            u.id === userId ? { ...u, isFollowing: data.isFollowing } : u
-                        ),
-                    }))
+                    return {
+                        ...old,
+                        pages: old.pages.map((page) => ({
+                            ...page,
+                            users: page.users.map((u) =>
+                                u.id === userId ? { ...u, isFollowing: data.isFollowing } : u
+                            ),
+                        })),
+                    }
                 }
             )
             queryClient.invalidateQueries({ queryKey: ['user', id] })
@@ -125,22 +130,26 @@ function ConnectionsContent() {
         },
     })
 
+
     const handleFollow = (targetId: string, currentIsFollowing: boolean) => {
         if (!user) {
             router.push('/login')
             return
         }
         // Optimistic
-        queryClient.setQueryData<ConnectionsPage[]>(
+        queryClient.setQueryData<ConnectionsCache>(
             ['connections', id, tab],
             (old) => {
                 if (!old) return old
-                return old.map((page) => ({
-                    ...page,
-                    users: page.users.map((u) =>
-                        u.id === targetId ? { ...u, isFollowing: !currentIsFollowing } : u
-                    ),
-                }))
+                return {
+                    ...old,
+                    pages: old.pages.map((page) => ({
+                        ...page,
+                        users: page.users.map((u) =>
+                            u.id === targetId ? { ...u, isFollowing: !currentIsFollowing } : u
+                        ),
+                    })),
+                }
             }
         )
         followMutation.mutate(targetId)
@@ -219,8 +228,7 @@ function ConnectionsContent() {
                     <button
                         onClick={() => setTab('followers')}
                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full
-                            text-xs font-bold transition-all cursor-pointer ${
-                            tab === 'followers'
+                            text-xs font-bold transition-all cursor-pointer ${tab === 'followers'
                                 ? 'bg-white shadow-sm text-gray-900'
                                 : 'text-gray-500 hover:text-gray-800'
                             }`}
@@ -231,8 +239,7 @@ function ConnectionsContent() {
                     <button
                         onClick={() => setTab('following')}
                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-full
-                            text-xs font-bold transition-all cursor-pointer ${
-                            tab === 'following'
+                            text-xs font-bold transition-all cursor-pointer ${tab === 'following'
                                 ? 'bg-white shadow-sm text-gray-900'
                                 : 'text-gray-500 hover:text-gray-800'
                             }`}

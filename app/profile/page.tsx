@@ -5,11 +5,24 @@ import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import PinCard from '../components/PinCard'
 import { useAuthStore } from '@/lib/authStore'
-import { FiAtSign, FiMail, FiImage, FiMapPin, FiGrid, FiPlus, FiUserPlus } from 'react-icons/fi'
+import { FiAtSign, FiMail, FiUsers, FiImage, FiMapPin, FiGrid, FiPlus, FiUserPlus } from 'react-icons/fi'
 
 export default function ProfilePage() {
     const { user, setUser } = useAuthStore()
     const queryClient = useQueryClient()
+
+    const { data: followData } = useQuery<{ followersCount: number; followingCount: number }>({
+        queryKey: ['follow-stats', user?.id],
+        queryFn: async () => {
+            const res = await fetch(`/api/users/${user!.id}/follow`)
+            if (!res.ok) throw new Error('خطا')
+            return res.json()
+        },
+        enabled: !!user?.id,
+        staleTime: 60 * 1000,
+    })
+
+    const followingCount = followData?.followingCount ?? 0
 
     // ── دریافت کاربر فعلی (فقط اگر store خالی باشه) ──
     const { isLoading: loadingUser } = useQuery({
@@ -115,9 +128,6 @@ export default function ProfilePage() {
                                 </span>
                             )}
                         </div>
-                        <div className="absolute -bottom-1.5 -left-1.5 w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:rotate-12">
-                            <FiGrid className="w-3.5 h-3.5 text-red-600" />
-                        </div>
                     </div>
 
                     <h1 className="text-white text-2xl sm:text-3xl font-extrabold tracking-tight mt-5 transition-transform duration-300 hover:scale-[1.02]">
@@ -132,10 +142,9 @@ export default function ProfilePage() {
                             {user.email}<FiMail className="w-3 h-3" />
                         </span>
                     </div>
-
                     {/* آمار */}
                     <div className="mt-6 flex items-center gap-5 sm:gap-7">
-                        {/* پین‌ها */}
+                        {/* پین‌ها — بدون لینک */}
                         <div className="group/stat flex flex-col items-center gap-1.5 cursor-default">
                             <div className="flex items-center gap-1.5">
                                 <FiGrid className="w-5 h-5 text-red-400/60 transition-all duration-300 group-hover/stat:text-red-400 group-hover/stat:scale-110" />
@@ -149,8 +158,11 @@ export default function ProfilePage() {
 
                         <span className="w-1 h-1 rounded-full bg-white/20" />
 
-                        {/* دنبال‌کننده‌ها */}
-                        <div className="group/stat flex flex-col items-center gap-1.5 cursor-default">
+                        {/* ✨ دنبال‌کننده‌های خودت — لینک به connections */}
+                        <Link
+                            href={`/user/${user.id}/connections?tab=followers`}
+                            className="group/stat flex flex-col items-center gap-1.5 no-underline"
+                        >
                             <div className="flex items-center gap-1.5">
                                 <FiUserPlus className="w-5 h-5 text-fuchsia-400/60 transition-all duration-300 group-hover/stat:text-fuchsia-400 group-hover/stat:scale-110" />
                                 <span className="text-xl sm:text-2xl font-black tabular-nums leading-none bg-gradient-to-br from-fuchsia-400 to-purple-400 bg-clip-text text-transparent">
@@ -159,7 +171,24 @@ export default function ProfilePage() {
                             </div>
                             <span className="text-[11px] text-white/50 font-semibold">دنبال‌کننده</span>
                             <span className="h-0.5 w-0 rounded-full bg-gradient-to-l from-fuchsia-500 to-purple-400 opacity-0 group-hover/stat:opacity-100 group-hover/stat:w-full transition-all duration-400 ease-out" />
-                        </div>
+                        </Link>
+
+                        <span className="w-1 h-1 rounded-full bg-white/20" />
+
+                        {/* ✨ دنبال‌شده‌های خودت — لینک به connections */}
+                        <Link
+                            href={`/user/${user.id}/connections?tab=following`}
+                            className="group/stat flex flex-col items-center gap-1.5 no-underline"
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <FiUsers className="w-5 h-5 text-blue-400/60 transition-all duration-300 group-hover/stat:text-blue-400 group-hover/stat:scale-110" />
+                                <span className="text-xl sm:text-2xl font-black tabular-nums leading-none bg-gradient-to-br from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                                    {followingCount}
+                                </span>
+                            </div>
+                            <span className="text-[11px] text-white/50 font-semibold">دنبال‌شده</span>
+                            <span className="h-0.5 w-0 rounded-full bg-gradient-to-l from-blue-500 to-cyan-400 opacity-0 group-hover/stat:opacity-100 group-hover/stat:w-full transition-all duration-400 ease-out" />
+                        </Link>
                     </div>
                 </div>
             </div>
