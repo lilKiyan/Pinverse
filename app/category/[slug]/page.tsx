@@ -1,10 +1,11 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { useInfiniteQuery } from '@tanstack/react-query'
 import PinCard from '@/app/components/PinCard'
+import PinGridSkeleton from '@/app/components/skeletons/PinGridSkeleton'
 import Spinner from '@/app/components/Spinner'
 import {
     FiArrowRight,
@@ -22,32 +23,10 @@ const LIMIT = 12
 export default function CategoryPage() {
     const { slug } = useParams<{ slug: string }>()
     const router = useRouter()
-    const [reportedFilterLocal] = useState('') // (برای آینده — گزارش‌ها اینجا هم می‌توانند فیلتر شوند)
+    const [reportedFilterLocal] = useState('')
 
-    // ── دسته معتبر؟ از لیست ثابت چک می‌کنیم (سریع، بدون fetch) ──
     const categoryMeta = getCategoryBySlug(slug ?? '')
 
-    if (!categoryMeta) {
-        return (
-            <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center">
-                <FiAlertTriangle className="w-8 h-8 text-gray-300 mb-4" />
-                <p className="text-gray-900 font-bold text-lg">دسته‌بندی یافت نشد</p>
-                <p className="text-gray-400 text-sm mt-1 mb-5">
-                    دسته‌بندی «{slug}» وجود ندارد
-                </p>
-                <button
-                    onClick={() => router.push('/')}
-                    className="no-underline bg-gray-900 text-white px-6 py-2.5 rounded-full font-semibold text-sm transition-all active:scale-95"
-                >
-                    بازگشت به خانه
-                </button>
-            </div>
-        )
-    }
-
-    const CategoryIcon = categoryMeta.iconComponent
-
-    // ── Query: پین‌های این دسته ──
     const {
         data,
         fetchNextPage,
@@ -72,9 +51,50 @@ export default function CategoryPage() {
         getNextPageParam: (lastPage, allPages) => {
             return lastPage.hasMore ? allPages.length + 1 : undefined
         },
+        enabled: !!categoryMeta,
         staleTime: 60 * 1000,
-        enabled: !!slug,
     })
+
+    const loadMoreRef = useRef<HTMLDivElement | null>(null)
+
+    useEffect(() => {
+        const el = loadMoreRef.current
+        if (!el || !hasNextPage) return
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+                    fetchNextPage()
+                }
+            },
+            {
+                rootMargin: '400px',
+            }
+        )
+
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage])
+
+    if (!categoryMeta) {
+        return (
+            <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 text-center">
+                <FiAlertTriangle className="w-8 h-8 text-gray-300 mb-4" />
+                <p className="text-gray-900 font-bold text-lg">دسته‌بندی یافت نشد</p>
+                <p className="text-gray-400 text-sm mt-1 mb-5">
+                    دسته‌بندی «{slug}» وجود ندارد
+                </p>
+                <button
+                    onClick={() => router.push('/')}
+                    className="no-underline bg-gray-900 text-white px-6 py-2.5 rounded-full font-semibold text-sm transition-all active:scale-95"
+                >
+                    بازگشت به خانه
+                </button>
+            </div>
+        )
+    }
+
+    const CategoryIcon = categoryMeta.iconComponent
 
     const pins = data?.pages.flatMap((page) => page.pins) ?? []
 
@@ -83,53 +103,43 @@ export default function CategoryPage() {
             <div className="p-4 md:p-6 mx-auto">
 
                 {/* ═══ هدر — مینیمال ═══ */}
-                <div className="flex items-end gap-4 mb-8 sm:mb-12">
+                <div className="flex items-center gap-3 mb-6 sm:mb-8">
                     <Link
                         href="/"
                         aria-label="بازگشت به خانه"
-                        className="group mb-1 shrink-0 w-9 h-9 sm:w-12 sm:h-12 rounded-xl
-                            flex items-center justify-center
-                            text-gray-400 hover:text-white
-                            ring-1 ring-gray-200 hover:ring-gray-900
-                            bg-white hover:bg-gray-900
-                            transition-all duration-300
-                            hover:shadow-lg hover:shadow-gray-900/20
-                            active:scale-90 no-underline"
+                        className="group shrink-0 w-9 h-9 sm:w-10 sm:h-10 rounded-xl
+            flex items-center justify-center
+            text-gray-500 hover:text-white
+            ring-1 ring-gray-200 hover:ring-gray-900
+            bg-white hover:bg-gray-900
+            transition-all duration-200
+            hover:shadow-md hover:shadow-gray-900/15
+            active:scale-95 no-underline"
                     >
-                        <FiArrowRight
-                            className="w-4 h-4 transition-transform duration-300
-                            "
-                        />
+                        <FiArrowRight className="w-4 h-4" />
                     </Link>
-                    <div className="min-w-0">
-                        {/* عنوان + آیکون — ریسپانسیو دقیق */}
-                        <h1 className="text-xl sm:text-2xl md:text-4xl font-bold text-gray-900
-                            tracking-tight flex items-center gap-2.5 sm:gap-3.5">
-                            <span
-                                className="w-9 h-9 sm:w-12 sm:h-12 md:w-14 md:h-14
-                                    rounded-xl sm:rounded-2xl
-                                    flex items-center justify-center shrink-0
-                                    transition-transform duration-300
-                                    hover:scale-110 hover:rotate-[-6deg]"
-                                style={{ backgroundColor: `${categoryMeta.color}14` }}
-                            >
-                                <CategoryIcon
-                                    className="w-4 h-4 sm:w-5 sm:h-5 md:w-7 md:h-7
-                                        transition-transform duration-300"
-                                    style={{ color: categoryMeta.color }}
-                                />
-                            </span>
 
-                            <span className="truncate">{categoryMeta.name}</span>
-                        </h1>
-                    </div>
+                    <h1 className="min-w-0 flex items-center gap-2.5 text-base sm:text-lg md:text-xl font-bold text-gray-900 tracking-tight">
+                        <span
+                            className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl
+                flex items-center justify-center shrink-0
+                transition-transform duration-200
+                hover:scale-105 hover:-rotate-6"
+                            style={{ backgroundColor: `${categoryMeta.color}14` }}
+                        >
+                            <CategoryIcon
+                                className="w-4 h-4 sm:w-5 sm:h-5"
+                                style={{ color: categoryMeta.color }}
+                            />
+                        </span>
+
+                        <span className="truncate">{categoryMeta.name}</span>
+                    </h1>
                 </div>
 
                 {/* ═══ محتوا ═══ */}
                 {isLoading ? (
-                    <div className="flex justify-center py-28">
-                        <Spinner size="lg" />
-                    </div>
+                    <PinGridSkeleton count={12} />
                 ) : isError ? (
                     <div className="py-20 text-center">
                         <FiAlertCircle className="w-7 h-7 text-gray-300 mx-auto mb-3" />
@@ -166,24 +176,15 @@ export default function CategoryPage() {
                 {/* ═══ infinite scroll ═══ */}
                 {hasNextPage && (
                     <div ref={(el) => {
-                        // (برای سادگی فعلاً دکمه؛ در آینده می‌توان observer اضافه کرد)
                     }} />
                 )}
 
                 {hasNextPage && (
-                    <div className="flex justify-center py-10">
-                        <button
-                            onClick={() => fetchNextPage()}
-                            disabled={isFetchingNextPage}
-                            className="no-underline px-6 py-2.5 rounded-full bg-gray-900 text-white text-xs font-bold
-                                hover:bg-gray-800 transition-all active:scale-95 disabled:opacity-50"
-                        >
-                            {isFetchingNextPage ? (
-                                <Spinner size="xs" />
-                            ) : (
-                                'بارگذاری بیشتر'
-                            )}
-                        </button>
+                    <div
+                        ref={loadMoreRef}
+                        className="flex justify-center items-center py-8 min-h-16"
+                    >
+                        {isFetchingNextPage && <Spinner size="sm" />}
                     </div>
                 )}
             </div>

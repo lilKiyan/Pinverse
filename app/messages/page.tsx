@@ -104,7 +104,7 @@ export default function MessagesPage() {
                         <FiArrowRight className="w-5 h-5 transition-transform" />
                     </Link>
                     <div className="min-w-0">
-                        <h1 className="flex items-center gap-2.5 text-xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+                        <h1 className="flex items-center gap-2.5 text-md md:text-xl font-extrabold text-gray-900 tracking-tight">
                             پیام‌ها
                             {!loading && conversations.length > 0 && (
                                 <span className="text-xs font-extrabold bg-red-50 text-red-600 ring-1 ring-red-100 px-2.5 py-1 rounded-full tabular-nums translate-y-0.5">
@@ -112,7 +112,7 @@ export default function MessagesPage() {
                                 </span>
                             )}
                         </h1>
-                        <p className="text-xs md:text-sm text-gray-400 font-medium mt-0.5">گفتگوهای اخیر شما</p>
+                        <p className="text-xs  text-gray-400 font-medium mt-0.5">گفتگوهای اخیر شما</p>
                     </div>
                 </div>
 

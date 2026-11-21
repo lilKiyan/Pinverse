@@ -21,6 +21,7 @@ import {
   FiImage,
 } from 'react-icons/fi'
 import { useAuthStore } from '@/lib/authStore'
+import { useDragScroll } from '@/lib/useDragScroll'
 
 type Board = {
   id: string
@@ -54,6 +55,7 @@ const Navbar = () => {
   const { user, setUser } = useAuthStore()
   const router = useRouter()
   const queryClient = useQueryClient()
+  const boardsScrollRef = useDragScroll<HTMLDivElement>()
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isDropdownVisible, setIsDropdownVisible] = useState(false)
@@ -198,7 +200,7 @@ const Navbar = () => {
     }
 
     document.addEventListener('mousedown', handleOutside)
-    document.addEventListener('touchstart', handleOutside)   // ✅ موبایل
+    document.addEventListener('touchstart', handleOutside)   
     return () => {
       document.removeEventListener('mousedown', handleOutside)
       document.removeEventListener('touchstart', handleOutside)
@@ -700,10 +702,13 @@ const Navbar = () => {
 
       {/* ردیف بردها */}
       {boards.length > 0 && (
-        <div className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 pb-2.5 pt-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] nav-boards">
+        <div
+          ref={boardsScrollRef}
+          className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 pb-2.5 pt-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] nav-boards cursor-grab select-none"
+        >
           <Link
             href="/"
-            className="flex-shrink-0 px-3.5 md:px-4 py-1 md:py-1.5 bg-red-600 text-white rounded-full text-xs md:text-sm font-medium hover:bg-red-700 shadow-sm shadow-red-100 transition-colors no-underline"
+            className="flex-shrink-0 px-3.5 md:px-4 py-1 md:py-1.5 bg-red-600 text-white rounded-full text-xs font-medium hover:bg-red-700 shadow-sm shadow-red-100 transition-colors no-underline"
           >
             همه
           </Link>
@@ -712,7 +717,7 @@ const Navbar = () => {
             <Link
               key={board.id}
               href={`/board/${board.id}`}
-              className="flex-shrink-0 px-3.5 md:px-4 py-1 md:py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs md:text-sm font-medium hover:bg-gray-200 hover:-translate-y-0.5 transition-all duration-200 no-underline"
+              className="flex-shrink-0 px-3.5 md:px-4 py-1 md:py-1.5 bg-gray-100 text-gray-700 rounded-full text-xs font-medium hover:bg-gray-200 hover:-translate-y-0.5 transition-all duration-200 no-underline"
             >
               {board.name}
             </Link>

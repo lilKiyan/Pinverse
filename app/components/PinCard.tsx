@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import dynamic from 'next/dynamic'
-import { useState } from 'react'
+import { useState, useMemo, useCallback, memo } from 'react'
 import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { FiUpload, FiCheckCircle, FiFolder, FiEyeOff, FiRotateCcw, FiShare2 } from 'react-icons/fi'
 import type { Board } from './SaveToBoardDropdown'
@@ -60,7 +60,7 @@ type PinsPage = {
 }
 type PinsCache = InfiniteData<PinsPage>
 
-const PinCard = ({
+const PinCard = memo(({
     pin,
     onDeletePin,
     onRemoveFromBoard,
@@ -93,12 +93,12 @@ const PinCard = ({
         staleTime: 60 * 1000,
     })
 
-    const boards = boardsRaw.map((b) => ({
+    const boards = useMemo(() => boardsRaw.map((b) => ({
         id: b.id,
         name: b.name,
         thumbnail: b.pins?.[0]?.imageUrl || '/placeholder.jpg',
         isTopChoice: false,
-    }))
+    })), [boardsRaw])
 
     const createBoardMutation = useMutation({
         mutationFn: async (name: string): Promise<{ id: string; name: string }> => {
@@ -115,9 +115,9 @@ const PinCard = ({
         },
     })
 
-    const handleCreateBoard = (name: string) => {
+    const handleCreateBoard = useCallback((name: string) => {
         createBoardMutation.mutate(name)
-    }
+    }, [createBoardMutation])
 
     const saveMutation = useMutation({
         mutationFn: async ({ pinId, boardId, action }: SaveMutationVariables): Promise<unknown> => {
@@ -195,8 +195,20 @@ const PinCard = ({
             document.body.removeChild(link)
 
             URL.revokeObjectURL(blobUrl)
-        } catch (error) {
-            console.error('خطا در دانلود:', error)
+        } catch {
+            // فال‌بک در صورت محدودیت CORS مرورگر
+            try {
+                const link = document.createElement('a')
+                link.href = pin.imageUrl
+                link.target = '_blank'
+                link.rel = 'noopener noreferrer'
+                link.download = filename
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+            } catch (err) {
+                console.error('خطا در دانلود:', err)
+            }
         }
     }
 
@@ -229,7 +241,7 @@ const PinCard = ({
         }
     }
 
-    const handleToggleSave = (board: Board) => {
+    const handleToggleSave = useCallback((board: Board) => {
         const isCurrentlySaved = savedBoards.some((sb) => sb.boardId === board.id)
         const action = isCurrentlySaved ? 'unsave' : 'save'
 
@@ -239,7 +251,7 @@ const PinCard = ({
             action,
             boardName: board.name,
         })
-    }
+    }, [pin.id, savedBoards, saveMutation])
 
     const handleShare = async () => {
         const url = `${window.location.origin}/pin/${pin.id}`
@@ -323,7 +335,6 @@ const PinCard = ({
                             priority={priority}
                         />
 
-                        {/* 🏷️ badge دسته — از داده‌ی API */}
                         {category && CategoryIcon && (
                             <span
                                 className="absolute top-2 right-2 z-10
@@ -358,7 +369,7 @@ const PinCard = ({
                     />
                     <button
                         aria-label="اشتراک‌گذاری پین"
-                        onClick={() => setIsShareModalOpen(true)}   // ✅ به‌جای navigator.share
+                        onClick={() => setIsShareModalOpen(true)}  
                         className="pointer-events-auto absolute bottom-12 right-3 w-10 h-10 bg-white/90 rounded-2xl cursor-pointer flex items-center justify-center text-lg shadow-lg hover:bg-white hover:scale-105 active:scale-95 transition-all duration-200"
                     >
                         <FiUpload />
@@ -471,6 +482,8 @@ const PinCard = ({
             )}
         </>
     )
-}
+})
+
+PinCard.displayName = 'PinCard'
 
 export default PinCard

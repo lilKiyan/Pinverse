@@ -83,7 +83,7 @@ export default function CreateEditBoardModal({ editingBoard, onClose, onSave }: 
                     value={boardName}
                     onChange={(e) => setBoardName(e.target.value)}
                     placeholder="مثلاً ایده‌های سفر"
-                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 mb-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100 transition-all"
+                    className="w-full border-2 border-gray-200 placeholder:text-sm rounded-xl px-4 py-3 mb-4 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100 transition-all"
                     autoFocus
                 />
 

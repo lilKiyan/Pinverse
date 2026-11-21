@@ -16,8 +16,9 @@ export function useUnreadCount() {
             return res.json()
         },
         enabled: !!userId,
-        refetchInterval: 2000, // هر 1 ثانیه چک کن
-        staleTime: 10000,
+        refetchInterval: 10000, // هر ۱۰ ثانیه چک کن
+        refetchOnWindowFocus: true,
+        staleTime: 5000,
     })
 
     return data?.count ?? 0

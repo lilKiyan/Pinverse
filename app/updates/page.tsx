@@ -1,10 +1,11 @@
 "use client"
 
 import { useState } from 'react'
-import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query'
+import Link from 'next/link'
+import { useInfiniteQuery, useMutation, useQueryClient, useQuery, type InfiniteData } from '@tanstack/react-query'
 import NotificationItem from '@/app/components/NotificationItem'
 import Spinner from '@/app/components/Spinner'
-import { FiBell, FiCheck, FiInbox } from 'react-icons/fi'
+import { FiBell, FiCheck, FiInbox, FiLogIn } from 'react-icons/fi'
 import { useAuthStore } from '@/lib/authStore'
 import type { NotificationDTO } from '@/app/components/NotificationItem'
 
@@ -19,6 +20,20 @@ export default function UpdatesPage() {
     const queryClient = useQueryClient()
     const user = useAuthStore((state) => state.user)
     const [filter, setFilter] = useState<'all' | 'unread'>('all')
+
+    const { data: meData, isLoading: checkingAuth } = useQuery({
+        queryKey: ['me'],
+        queryFn: async () => {
+            const res = await fetch('/api/auth/me')
+            if (!res.ok) return null
+            const data = await res.json()
+            return data.user
+        },
+        enabled: !user,
+        staleTime: 60 * 1000,
+    })
+
+    const currentUser = user || meData
 
     // ── Query: لیست نوتیف‌ها با cursor pagination ──
     const {
@@ -39,6 +54,7 @@ export default function UpdatesPage() {
         },
         initialPageParam: null as string | null,
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+        enabled: !!currentUser,
         staleTime: 30 * 1000,
     })
 
@@ -164,6 +180,29 @@ export default function UpdatesPage() {
         markAllMutation.mutate()
     }
 
+    if (!checkingAuth && !currentUser) {
+        return (
+            <main className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 pb-24 lg:pb-8">
+                <div className="max-w-sm w-full bg-white rounded-3xl p-8 shadow-xl shadow-red-100/30 ring-1 ring-black/5 flex flex-col items-center text-center space-y-4 animate-[fadeIn_0.3s_ease-out]">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-red-200">
+                        <FiBell className="w-7 h-7" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <h2 className="text-xl font-bold text-gray-900">اعلان‌های شما</h2>
+                        <p className="text-gray-500 text-sm">برای مشاهده تعاملات، لایک‌ها و پیام‌ها وارد شوید.</p>
+                    </div>
+                    <Link
+                        href="/login"
+                        className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold py-3 px-6 rounded-xl shadow-md shadow-red-200 hover:shadow-lg active:scale-95 transition-all no-underline"
+                    >
+                        <FiLogIn className="w-4 h-4" />
+                        ورود به حساب کاربری
+                    </Link>
+                </div>
+            </main>
+        )
+    }
+
     if (isLoading) {
         return (
             <main className="min-h-[70vh] flex items-center justify-center">
@@ -173,7 +212,7 @@ export default function UpdatesPage() {
     }
 
     return (
-        <main dir="rtl" className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <main dir="rtl" className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white pb-24 lg:pb-10">
             {/* بلاب تزئینی */}
             <div className="absolute -top-24 -right-24 w-80 h-80 bg-red-100/50 rounded-full blur-3xl pointer-events-none" />
 

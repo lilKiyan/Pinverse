@@ -8,6 +8,7 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Spinner from '@/app/components/Spinner'
+import PinDetailSkeleton from '@/app/components/skeletons/PinDetailSkeleton'
 import { getCategoryIcon } from '@/lib/categories'
 
 const SharePinModal = dynamic(() => import('@/app/components/SharePinModal'), { ssr: false })
@@ -140,9 +141,7 @@ export default function PinDetailPage() {
         },
     }
 
-    // ═══════════════ QUERIES ═══════════════
 
-    // ── Query ۱: اطلاعات پین ──
     const {
         data: pinData,
         isLoading: loading,
@@ -164,7 +163,6 @@ export default function PinDetailPage() {
     const isLiked = pin?.isLikedByMe ?? false
     const totalLikes = pin?.totalLikes ?? 0
 
-    // ── Query ۲: بردهای کاربر (فقط وقتی دراپ‌داون بازه) ──
     const { data: boardsRaw = [], isLoading: loadingBoards } = useQuery<any[]>({
         queryKey: ['boards'],
         queryFn: async () => {
@@ -182,7 +180,6 @@ export default function PinDetailPage() {
         thumbnail: b.pins?.[0]?.imageUrl || '/placeholder.jpg',
     }))
 
-    // ── Query ۳: پین‌های مرتبط ──
     const { data: relatedPins = [], isLoading: loadingRelated } = useQuery<any[]>({
         queryKey: ['related-pins', id],
         queryFn: async () => {
@@ -195,7 +192,6 @@ export default function PinDetailPage() {
         staleTime: 5 * 60 * 1000,
     })
 
-    // ── Query ۴: وضعیت فالو کاربر مقابل ──
     const { data: followData } = useQuery<{
         isFollowing: boolean
         followersCount: number
@@ -213,9 +209,7 @@ export default function PinDetailPage() {
     const isFollowed = followData?.isFollowing ?? false
     const followersCount = followData?.followersCount ?? 0
 
-    // ═══════════════ MUTATIONS ═══════════════
 
-    // ── Mutation: لایک (با Optimistic Update) ──
     const likeMutation = useMutation({
         mutationFn: async () => {
             const res = await fetch(`/api/pins/${pin!.id}/like`, { method: 'POST' })
@@ -223,13 +217,10 @@ export default function PinDetailPage() {
             return res.json() as Promise<{ isLiked: boolean; totalLikes: number }>
         },
         onMutate: async () => {
-            // جلوی fetch های در حال اجرا رو بگیر
             await queryClient.cancelQueries({ queryKey: ['pin', id] })
 
-            // وضعیت فعلی cache رو نگه دار
             const previous = queryClient.getQueryData<PinResponse>(['pin', id])
 
-            // UI رو فوری آپدیت کن (Optimistic)
             queryClient.setQueryData<PinResponse>(['pin', id], (old) => {
                 if (!old) return old
                 const wasLiked = old.pin.isLikedByMe
@@ -246,18 +237,15 @@ export default function PinDetailPage() {
             return { previous }
         },
         onError: (_err, _vars, context) => {
-            // اگه خطا داد، UI رو برگردون به حالت قبل
             if (context?.previous) {
                 queryClient.setQueryData(['pin', id], context.previous)
             }
         },
         onSettled: () => {
-            // در هر صورت، با سرور همگام کن
             queryClient.invalidateQueries({ queryKey: ['pin', id] })
         },
     })
 
-    // ── Mutation: فالو/آنفالو ──
     const followMutation = useMutation({
         mutationFn: async () => {
             const res = await fetch(`/api/users/${pin!.userId}/follow`, { method: 'POST' })
@@ -269,7 +257,6 @@ export default function PinDetailPage() {
         },
     })
 
-    // ── Mutation: ذخیره/حذف از برد (با Optimistic Update) ──
     const saveMutation = useMutation({
         mutationFn: async ({ boardId, isSaved }: { boardId: string; isSaved: boolean }) => {
             const res = await fetch('/api/saves', {
@@ -341,13 +328,23 @@ export default function PinDetailPage() {
             URL.revokeObjectURL(blobUrl)
         } catch (error) {
             console.error('خطا در دانلود:', error)
-            showToast('دانلود ناموفق بود')
+            try {
+                const link = document.createElement('a')
+                link.href = pin.imageUrl
+                link.target = '_blank'
+                link.rel = 'noopener noreferrer'
+                link.download = filename
+                document.body.appendChild(link)
+                link.click()
+                document.body.removeChild(link)
+            } catch {
+                showToast('دانلود ناموفق بود')
+            }
         } finally {
             setIsDownloading(false)
         }
     }
 
-    // ═══════════════ HANDLERS ═══════════════
 
     const toggleSave = () => {
         if (!user) {
@@ -383,14 +380,9 @@ export default function PinDetailPage() {
         setTimeout(() => setToast(''), 2000)
     }
 
-    // ═══════════════ RENDER ═══════════════
 
     if (loading) {
-        return (
-            <main dir="rtl" className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 via-white to-orange-50">
-                <Spinner size="md" />
-            </main>
-        )
+        return <PinDetailSkeleton />
     }
 
     if (isError || !pin) {
@@ -416,24 +408,23 @@ export default function PinDetailPage() {
     }
 
     return (
-        <main dir="rtl" className="relative pb-20 min-h-screen overflow-hidden bg-gradient-to-br from-red-50/60 via-white to-orange-50/50 py-6 md:py-10 px-2">
+        <main dir="rtl" className="relative pb-16 min-h-screen overflow-hidden bg-gradient-to-br from-red-50/60 via-white to-orange-50/50 py-4 sm:py-6 md:py-8 px-2 sm:px-4">
             <div className="absolute -top-32 -left-32 w-96 h-96 bg-red-100/50 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-32 -right-32 w-[28rem] h-[28rem] bg-orange-100/40 rounded-full blur-3xl pointer-events-none" />
 
-            <div className="relative max-w-[1400px] mx-auto">
+            <div className="relative max-w-[1200px] mx-auto">
                 <button
                     onClick={() => router.back()}
-                    className="inline-flex cursor-pointer items-center gap-2 text-gray-600 hover:text-gray-900 transition-all mb-6 group bg-white/80 backdrop-blur-md px-5 py-2.5 rounded-full shadow-sm ring-1 ring-black/5 hover:shadow-md"
+                    className="inline-flex cursor-pointer items-center gap-1.5 text-gray-600 hover:text-gray-900 transition-all mb-3.5 group bg-white/80 backdrop-blur-md px-3.5 py-1.5 rounded-full shadow-sm ring-1 ring-black/5 hover:shadow-md text-xs sm:text-sm"
                 >
-                    <FiArrowRight className="transition-transform group-hover:-translate-x-1" />
-                    <span className="font-medium text-xs md:text-sm">بازگشت</span>
+                    <FiArrowRight className="w-3.5 h-3.5" />
+                    <span className="font-medium">بازگشت</span>
                 </button>
 
-                <div className="bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-2xl ring-1 ring-black/5 overflow-hidden">
+                <div className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/50 ring-1 ring-black/5 overflow-hidden">
                     <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch">
-                        {/* ستون تصویر */}
-                        <div className="relative bg-gray-50 p-4 sm:p-6 flex items-center justify-center lg:border-l lg:border-gray-100">
-                            <div className="relative w-full group rounded-2xl overflow-hidden shadow-xl ring-1 ring-black/5">
+                        <div className="relative bg-gray-50/80 p-3 sm:p-4 md:p-5 flex items-center justify-center lg:border-l lg:border-gray-100">
+                            <div className="relative w-full group rounded-xl sm:rounded-2xl overflow-hidden shadow-lg ring-1 ring-black/5">
                                 <Image
                                     src={pin.imageUrl}
                                     alt={pin.title}
@@ -442,36 +433,34 @@ export default function PinDetailPage() {
                                     sizes="(max-width:1021px) 100vw, 50vw"
                                     priority
                                     style={{ width: '100%', height: 'auto' }}
-                                    className="w-full max-h-[85vh] object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
+                                    className="w-full max-h-[75vh] object-cover rounded-xl transition-transform duration-700 ease-out group-hover:scale-[1.02]"
                                 />
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-6 pb-1 pt-16 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <p className="text-white font-bold text-lg truncate">{pin.title}</p>
+                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-4 pb-2 pt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                    <p className="text-white font-bold text-sm truncate">{pin.title}</p>
                                 </div>
                             </div>
                         </div>
 
-                        {/* ستون اطلاعات */}
                         <div className="flex flex-col divide-y divide-gray-100">
-                            {/* مالک پین */}
-                            <div className="flex items-center justify-between gap-3 p-6">
-                                <Link href={`/user/${pin.owner.id}`} className="flex items-center gap-3.5 no-underline group min-w-0">
+                            <div className="flex items-center justify-between gap-3 p-4 sm:p-5">
+                                <Link href={`/user/${pin.owner.id}`} className="flex items-center gap-3 no-underline group min-w-0">
                                     <div className="relative shrink-0">
-                                        <div className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-red-200/60 ring-2 ring-white overflow-hidden">
+                                        <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold text-base shadow-md shadow-red-200/50 ring-2 ring-white overflow-hidden">
                                             {pin.owner?.avatar ? (
-                                                <Image src={pin.owner.avatar} alt={pin.owner.name} className="w-full h-full object-cover" width={56} height={56} />
+                                                <Image src={pin.owner.avatar} alt={pin.owner.name} className="w-full h-full object-cover" width={44} height={44} />
                                             ) : (
                                                 pin.owner?.username?.charAt(0).toUpperCase()
                                             )}
                                         </div>
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="font-bold text-gray-900 truncate group-hover:text-red-600 transition-colors">
+                                        <p className="font-bold text-sm text-gray-900 truncate group-hover:text-red-600 transition-colors">
                                             {pin.owner?.name}
                                         </p>
-                                        <p className="text-sm text-gray-400 truncate text-right" dir='ltr'>
+                                        <p className="text-xs text-gray-400 truncate text-right" dir='ltr'>
                                             @{pin.owner?.username}
                                         </p>
-                                        <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                                        <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-1">
                                             <FiUserPlus className="w-3 h-3" />
                                             {followersCount} دنبال‌کننده
                                         </p>
@@ -481,7 +470,7 @@ export default function PinDetailPage() {
                                 {pin.isOwner ? (
                                     <Link
                                         href={`/settings`}
-                                        className="shrink-0 text-xs bg-gray-100 hover:bg-gray-200 px-4 py-2.5 rounded-full font-semibold transition-all no-underline flex items-center gap-1.5 text-gray-700"
+                                        className="shrink-0 text-xs bg-gray-100 hover:bg-gray-200 px-3.5 py-1.5 rounded-full font-semibold transition-all no-underline flex items-center gap-1.5 text-gray-700"
                                     >
                                         <FiGrid className="w-3.5 h-3.5" />
                                         ویرایش
@@ -490,9 +479,9 @@ export default function PinDetailPage() {
                                     <button
                                         onClick={handleFollow}
                                         disabled={followMutation.isPending}
-                                        className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-full font-semibold text-xs transition-all ${isFollowed
+                                        className={`shrink-0 flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-semibold text-xs transition-all ${isFollowed
                                             ? 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                            : 'bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-200/70'
+                                            : 'bg-red-600 text-white hover:bg-red-700 shadow-md shadow-red-200/70'
                                             } ${followMutation.isPending ? 'opacity-60 cursor-not-allowed' : ''}`}
                                     >
                                         {followMutation.isPending ? (
@@ -507,17 +496,14 @@ export default function PinDetailPage() {
                                 )}
                             </div>
 
-                            {/* عنوان، دسته‌بندی و توضیحات */}
-                            <div className="px-6 py-5">
-                                {/* 🏷️ دسته‌بندی — ابربرچسب بالای عنوان */}
+                            <div className="px-4 sm:px-5 py-3 sm:py-4">
                                 {pin.category && (
                                     <Link
                                         href={`/category/${pin.category.slug}`}
-                                        className="group/cat inline-flex items-center gap-2 mb-3 no-underline"
+                                        className="group/cat inline-flex items-center gap-1.5 mb-2 no-underline"
                                     >
-                                        {/* آیکون دسته — چیپ کوچیک با پس‌زمینه رنگی */}
                                         <span
-                                            className="w-6 h-6 rounded-lg flex items-center justify-center
+                                            className="w-5 h-5 rounded-md flex items-center justify-center
                                                 transition-all duration-300
                                                 group-hover/cat:rotate-[-10deg] group-hover/cat:scale-110"
                                             style={{ backgroundColor: `${pin.category.color}18` }}
@@ -526,50 +512,46 @@ export default function PinDetailPage() {
                                                 const CatIcon = getCategoryIcon(pin.category.icon)
                                                 return (
                                                     <CatIcon
-                                                        className="w-3.5 h-3.5"
+                                                        className="w-3 h-3"
                                                         style={{ color: pin.category.color }}
                                                     />
                                                 )
                                             })()}
                                         </span>
 
-                                        {/* اسم دسته — با رنگ هویتی خودش */}
                                         <span
-                                            className="text-xs font-bold transition-colors duration-300
+                                            className="text-[11px] font-bold transition-colors duration-300
                                                 group-hover/cat:opacity-70"
                                             style={{ color: pin.category.color }}
                                         >
                                             {pin.category.name}
                                         </span>
 
-                                        {/* جداکننده نقطه */}
                                         <span className="w-1 h-1 rounded-full bg-gray-300" />
 
-                                        {/* «همه» — با hover روشن می‌شود */}
-                                        <span className="text-xs text-gray-300
+                                        <span className="text-[11px] text-gray-300
                                             group-hover/cat:text-gray-500 transition-colors duration-300">
                                             مشاهده همه
                                         </span>
                                     </Link>
                                 )}
 
-                                <h1 className="text-xl md:text-3xl font-extrabold text-gray-900 leading-snug mb-2.5">
+                                <h1 className="text-lg sm:text-xl font-black text-gray-900 leading-snug mb-1.5">
                                     {pin.title}
                                 </h1>
                                 {pin.description && (
-                                    <p className="text-gray-500 leading-relaxed text-[15px]">
+                                    <p className="text-gray-600 leading-relaxed text-xs sm:text-sm">
                                         {pin.description}
                                     </p>
                                 )}
                             </div>
 
-                            {/* آمار و دکمه لایک */}
-                            <div className="px-6 py-5">
-                                <div className="flex items-center gap-2.5 flex-wrap">
+                            <div className="px-4 sm:px-5 py-3">
+                                <div className="flex items-center gap-2 flex-wrap">
                                     <button
                                         onClick={handleLike}
                                         title={isLiked ? 'حذف لایک' : 'لایک'}
-                                        className={`relative group flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm transition-all duration-300 cursor-pointer active:scale-95 ${isLiked
+                                        className={`relative group flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs transition-all duration-300 cursor-pointer active:scale-95 ${isLiked
                                             ? 'bg-red-50 text-red-600 ring-1 ring-red-200'
                                             : 'bg-gray-50 text-gray-600 ring-1 ring-gray-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200'
                                             }`}
@@ -581,8 +563,8 @@ export default function PinDetailPage() {
                                                         key={i}
                                                         className="absolute w-1.5 h-1.5 rounded-full bg-red-500 animate-[particle_0.6s_ease-out_forwards]"
                                                         style={{
-                                                            '--tx': `${Math.cos((i * 60 * Math.PI) / 180) * 28}px`,
-                                                            '--ty': `${Math.sin((i * 60 * Math.PI) / 180) * 28}px`,
+                                                             '--tx': `${Math.cos((i * 60 * Math.PI) / 180) * 24}px`,
+                                                             '--ty': `${Math.sin((i * 60 * Math.PI) / 180) * 24}px`,
                                                         } as React.CSSProperties}
                                                     />
                                                 ))}
@@ -590,7 +572,7 @@ export default function PinDetailPage() {
                                         )}
                                         <FiHeart
                                             key={isLiked ? 'liked' : 'unliked'}
-                                            className={`w-[18px] h-[18px] transition-colors ${isLiked
+                                            className={`w-4 h-4 transition-colors ${isLiked
                                                 ? 'text-red-600 fill-red-600 animate-[likePop_0.45s_ease-out]'
                                                 : 'text-gray-400 group-hover:text-red-500'
                                                 }`}
@@ -600,61 +582,59 @@ export default function PinDetailPage() {
 
                                     <div
                                         title="تعداد ذخیره"
-                                        className="flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm bg-gray-50 text-gray-600 ring-1 ring-gray-200"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-gray-50 text-gray-600 ring-1 ring-gray-200"
                                     >
-                                        <FiBookmark className="w-[18px] h-[18px] text-gray-400" />
+                                        <FiBookmark className="w-4 h-4 text-gray-400" />
                                         <span className="tabular-nums">{pin.totalSaves}</span>
                                     </div>
 
                                     <button
                                         title="اشتراک‌گذاری"
                                         onClick={() => setIsShareModalOpen(true)}
-                                        className="flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm bg-gray-50 text-gray-600 ring-1 ring-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:ring-blue-200 transition-all duration-300 cursor-pointer active:scale-95"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-gray-50 text-gray-600 ring-1 ring-gray-200 hover:bg-blue-50 hover:text-blue-600 hover:ring-blue-200 transition-all duration-300 cursor-pointer active:scale-95"
                                     >
-                                        <FiShare2 className="w-[18px] h-[18px] text-gray-400 group-hover:text-blue-500" />
-                                        <span className="hidden sm:inline text-gray-500 text-xs font-semibold">اشتراک‌گذاری</span>
+                                        <FiShare2 className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                                        <span className="hidden sm:inline text-gray-500 text-[11px] font-semibold">اشتراک‌گذاری</span>
                                     </button>
 
                                     <button
                                         title="دانلود تصویر"
                                         onClick={handleDownload}
                                         disabled={isDownloading}
-                                        className="flex items-center gap-2 px-4 py-2.5 rounded-full font-bold text-sm bg-gray-50 text-gray-600 ring-1 ring-gray-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200 transition-all duration-300 cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full font-bold text-xs bg-gray-50 text-gray-600 ring-1 ring-gray-200 hover:bg-red-50 hover:text-red-600 hover:ring-red-200 transition-all duration-300 cursor-pointer active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed"
                                     >
                                         {isDownloading ? (
-                                            <FiLoader className="w-[18px] h-[18px] text-red-500 animate-spin" />
+                                            <FiLoader className="w-4 h-4 text-red-500 animate-spin" />
                                         ) : (
-                                            <FiDownload className="w-[18px] h-[18px] text-gray-400 group-hover:text-red-500" />
+                                            <FiDownload className="w-4 h-4 text-gray-400 group-hover:text-red-500" />
                                         )}
-                                        <span className="hidden sm:inline text-gray-500 text-xs font-semibold">
+                                        <span className="hidden sm:inline text-gray-500 text-[11px] font-semibold">
                                             {isDownloading ? 'در حال دانلود...' : 'دانلود'}
                                         </span>
                                     </button>
 
-                                    <span className="mr-auto hidden md:flex items-center gap-1.5 text-xs text-gray-400 font-medium">
+                                    <span className="mr-auto hidden md:flex items-center gap-1.5 text-[11px] text-gray-400 font-medium">
                                         <FiCalendar className="w-3.5 h-3.5" />
                                         {new Date(pin.createdAt).toLocaleDateString('fa-IR')}
                                     </span>
                                 </div>
                             </div>
 
-                            {/* بخش کامنت‌ها */}
                             <PinComments
                                 pinId={pin.id}
-                                onRequireLogin={() => setLoginAction('comment')}  // ✅
+                                onRequireLogin={() => setLoginAction('comment')}
                             />
 
-                            {/* دکمه ذخیره و منوی بردها */}
-                            <div className="relative p-6 mt-auto bg-gradient-to-t from-gray-50/80 to-transparent">
+                            <div className="relative p-4 sm:p-5 mt-auto bg-gradient-to-t from-gray-50/80 to-transparent">
                                 <button
                                     onClick={toggleSave}
-                                    className={`w-full text-sm md:text-lg flex items-center justify-between gap-2 px-4 py-4 rounded-2xl font-bold transition-all ${savedBoards.length > 0
-                                        ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-lg shadow-red-300/50 hover:shadow-xl hover:shadow-red-300/60 hover:brightness-105'
-                                        : 'bg-gray-900 text-white shadow-lg shadow-gray-300/50 hover:bg-black hover:shadow-xl'
+                                    className={`w-full text-xs sm:text-sm flex items-center justify-between gap-2 px-3.5 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl font-bold transition-all ${savedBoards.length > 0
+                                        ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white shadow-md shadow-red-300/50 hover:shadow-lg hover:shadow-red-300/60 hover:brightness-105'
+                                        : 'bg-gray-900 text-white shadow-md shadow-gray-300/50 hover:bg-black hover:shadow-lg'
                                         }`}
                                 >
-                                    <span className="flex items-center gap-2.5">
-                                        <FiBookmark className="w-5 h-5" />
+                                    <span className="flex items-center gap-2">
+                                        <FiBookmark className="w-4 h-4" />
                                         {savedBoards.length > 0 ? (
                                             savedBoards.length === 1
                                                 ? savedBoards[0].boardName
@@ -663,27 +643,27 @@ export default function PinDetailPage() {
                                             'ذخیره در برد'
                                         )}
                                     </span>
-                                    <FiChevronDown className={`w-4 h-4 transition-transform duration-300 ${saveOpen ? 'rotate-180' : ''}`} />
+                                    <FiChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${saveOpen ? 'rotate-180' : ''}`} />
                                 </button>
 
                                 {saveOpen && (
-                                    <div className="absolute bottom-full right-6 left-6 mb-3 bg-white rounded-2xl shadow-2xl shadow-gray-400/20 ring-1 ring-black/5 p-2 z-20 max-h-72 overflow-y-auto animate-[fadeInUp_0.25s_ease-out]">
+                                    <div className="absolute bottom-full right-4 sm:right-5 left-4 sm:left-5 mb-2.5 bg-white rounded-2xl shadow-xl shadow-gray-400/20 ring-1 ring-black/5 p-2 z-20 max-h-64 overflow-y-auto animate-[fadeInUp_0.25s_ease-out]">
                                         <div className="flex justify-center pt-1 pb-1.5">
-                                            <div className="w-10 h-1 rounded-full bg-gray-200" />
+                                            <div className="w-8 h-1 rounded-full bg-gray-200" />
                                         </div>
                                         {loadingBoards ? (
                                             <div className="flex justify-center py-6">
                                                 <Spinner size="md" />
                                             </div>
                                         ) : boards.length === 0 ? (
-                                            <div className="text-center py-6">
-                                                <div className="w-12 h-12 mx-auto mb-3 rounded-2xl bg-red-50 flex items-center justify-center">
-                                                    <FiFolder className="w-6 h-6 text-red-300" />
+                                            <div className="text-center py-5">
+                                                <div className="w-10 h-10 mx-auto mb-2 rounded-xl bg-red-50 flex items-center justify-center">
+                                                    <FiFolder className="w-5 h-5 text-red-300" />
                                                 </div>
-                                                <p className="text-sm text-gray-500 mb-3 font-medium">بردی ندارید. ابتدا یک برد بسازید.</p>
+                                                <p className="text-xs text-gray-500 mb-2.5 font-medium">بردی ندارید. ابتدا یک برد بسازید.</p>
                                                 <Link
                                                     href="/myboards?tab=boards"
-                                                    className="inline-block bg-red-600 text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-red-700 transition-all no-underline"
+                                                    className="inline-block bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold hover:bg-red-700 transition-all no-underline"
                                                 >
                                                     ساخت برد
                                                 </Link>
@@ -696,22 +676,22 @@ export default function PinDetailPage() {
                                                         <button
                                                             key={board.id}
                                                             onClick={() => handleToggleBoard(board.id, board.name)}
-                                                            className={`w-full cursor-pointer flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-right ${isSaved ? 'bg-red-50/80 text-red-700' : 'hover:bg-gray-50'
+                                                            className={`w-full cursor-pointer flex items-center gap-2.5 px-2.5 py-2 rounded-xl transition-all text-right ${isSaved ? 'bg-red-50/80 text-red-700' : 'hover:bg-gray-50'
                                                                 }`}
                                                         >
                                                             <Image
                                                                 src={board.thumbnail}
                                                                 alt={board.name}
-                                                                width={48}
-                                                                height={48}
-                                                                className="w-12 h-12 rounded-xl object-cover bg-gray-100 ring-1 ring-black/5"
+                                                                width={40}
+                                                                height={40}
+                                                                className="w-10 h-10 rounded-lg object-cover bg-gray-100 ring-1 ring-black/5"
                                                             />
-                                                            <span className="flex-1 font-semibold text-sm truncate">{board.name}</span>
+                                                            <span className="flex-1 font-semibold text-xs sm:text-sm truncate">{board.name}</span>
                                                             <span
-                                                                className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center transition-all ${isSaved ? 'bg-red-600 scale-100' : 'bg-gray-200 scale-90 opacity-0 group-hover:opacity-100'
+                                                                className={`w-5 h-5 shrink-0 rounded-full flex items-center justify-center transition-all ${isSaved ? 'bg-red-600 scale-100' : 'bg-gray-200 scale-90 opacity-0 group-hover:opacity-100'
                                                                     }`}
                                                             >
-                                                                {isSaved && <FiCheck className="w-3.5 h-3.5 text-white" />}
+                                                                {isSaved && <FiCheck className="w-3 h-3 text-white" />}
                                                             </span>
                                                         </button>
                                                     )
@@ -727,22 +707,22 @@ export default function PinDetailPage() {
             </div>
 
             {relatedPins.length > 0 && (
-                <section className="mt-12 px-6  mb-15">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-2xl bg-red-50 flex items-center justify-center">
-                            <FiGrid className="w-5 h-5 text-red-600" />
+                <section className="max-w-[1200px] mx-auto mt-8 px-2 sm:px-4 mb-12">
+                    <div className="flex items-center gap-2.5 mb-4">
+                        <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center">
+                            <FiGrid className="w-4 h-4 text-red-600" />
                         </div>
-                        <h2 className="text-md md:text-2xl font-extrabold text-gray-900">
-                            پین‌های بیشتر !
+                        <h2 className="text-sm sm:text-base font-extrabold text-gray-900">
+                            پین‌های مشابه و پیشنهادی
                         </h2>
                     </div>
 
                     {loadingRelated ? (
-                        <div className="flex justify-center py-12">
+                        <div className="flex justify-center py-8">
                             <Spinner size="md" />
                         </div>
                     ) : (
-                        <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
+                        <div className="columns-2 sm:columns-3 md:columns-4 gap-3 space-y-3">
                             {relatedPins.map((p) => (
                                 <PinCard key={p.id} pin={p} optionsRotationDefault={-60} />
                             ))}

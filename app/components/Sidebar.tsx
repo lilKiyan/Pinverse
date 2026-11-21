@@ -39,7 +39,6 @@ const Sidebar = () => {
             </Link>
 
             <nav className="relative flex-1 flex flex-col items-center gap-2 w-full px-2">
-                {/* اندیکاتور متحرک پشت آیتم فعال */}
                 {activeIndex !== -1 && (
                     <div
                         className="absolute right-2 left-2 rounded-xl bg-red-50 transition-all duration-300 ease-out pointer-events-none"
@@ -83,7 +82,6 @@ const Sidebar = () => {
                                 )}
                             </span>
 
-                            {/* تولتیپ موقع هاور */}
                             <span className="pointer-events-none absolute left-full ml-3 whitespace-nowrap bg-gray-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-lg opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
                                 {item.label}
                             </span>

@@ -3,24 +3,94 @@ import Sidebar from './components/Sidebar'
 import Navbar from './components/Navbar'
 import MobileNav from './components/MobileNav'
 import Providers from './providers'
-import type { Metadata, Viewport } from 'next'                                    // ✨ ۱
-import ServiceWorkerRegister from './components/ServiceWorkerRegister'           // ✨ ۲
+import type { Metadata, Viewport } from 'next'                         
+import ServiceWorkerRegister from './components/ServiceWorkerRegister'     
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pinverse.ir'
 
 export const metadata: Metadata = {
-    title: 'Pinverse — پلتفرم اشتراک‌گذاری تصویر',                                // ✨ اسم برند
-    description: 'کلون کامل Pinterest — پین، برد، چت و اعلان زنده',
-    appleWebApp: {                                                                 // ✨ ۳ — iOS
+    metadataBase: new URL(siteUrl),
+    title: {
+        default: 'Pinverse — پلتفرم اشتراک‌گذاری تصویر',
+        template: '%s | Pinverse',
+    },
+    description: 'پلتفرم اشتراک‌گذاری تصویر Pinverse — پین، برد، چت و اعلان زنده',
+    keywords: [
+        'PInverse',
+        'پینورس',
+        'اشتراک تصویر',
+        'پینترست فارسی',
+        'ایده‌های خلاقانه',
+        'عکس',
+        'گالری تصویر',
+        'طراحی',
+        'هنر',
+        'پین',
+    ],
+    authors: [{ name: 'Pinverse' }],
+    creator: 'Pinverse',
+    publisher: 'Pinverse',
+    robots: {
+        index: true,
+        follow: true,
+        googleBot: {
+            index: true,
+            follow: true,
+            'max-image-preview': 'large',
+            'max-snippet': -1,
+            'max-video-preview': -1,
+        },
+    },
+    openGraph: {
+        type: 'website',
+        locale: 'fa_IR',
+        url: '/',
+        siteName: 'Pinverse',
+        title: 'Pinverse — پلتفرم اشتراک‌گذاری تصویر',
+        description: 'پلتفرم اشتراک‌گذاری تصویر Pinverse — پین، برد، چت و اعلان زنده',
+        images: [
+            {
+                url: '/icons/icon-512.png',
+                width: 512,
+                height: 512,
+                alt: 'Pinverse',
+            },
+        ],
+    },
+    twitter: {
+        card: 'summary_large_image',
+        title: 'Pinverse — پلتفرم اشتراک‌گذاری تصویر',
+        description: 'پلتفرم اشتراک‌گذاری تصویر Pinverse — پین، برد، چت و اعلان زنده',
+        images: ['/icons/icon-512.png'],
+    },
+    alternates: {
+        canonical: '/',
+    },
+    appleWebApp: {
         capable: true,
         title: 'Pinverse',
         statusBarStyle: 'default',
     },
     icons: {
-        icon: '/icons/icon-192.png',                                               // ✨ فاوآیکون واقعی!
+        icon: '/icons/icon-192.png',
     },
 }
 
 export const viewport: Viewport = {
     themeColor: '#ffffff',
+}
+
+const websiteSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'Pinverse',
+    alternateName: 'پینورس',
+    url: siteUrl,
+    potentialAction: {
+        '@type': 'SearchAction',
+        target: `${siteUrl}/search?q={search_term_string}`,
+        'query-input': 'required name=search_term_string',
+    },
 }
 
 export default function RootLayout({
@@ -30,6 +100,12 @@ export default function RootLayout({
 }) {
     return (
         <html lang="fa" dir="rtl">
+            <head>
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }}
+                />
+            </head>
             <body className="bg-white selection:bg-rose-600 selection:text-white text-gray-900">
                 <ServiceWorkerRegister />    
                 <Providers>

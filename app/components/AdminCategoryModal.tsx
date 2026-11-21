@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { FiX, FiSave, FiAlertCircle } from 'react-icons/fi'
 import { ICON_REGISTRY, getCategoryIcon } from '@/lib/categories'
 
@@ -110,10 +110,10 @@ export default function AdminCategoryModal({
                                     transition-all duration-300"
                                 style={{ backgroundColor: `${color}18` }}
                             >
-                                <SelectedIcon
-                                    className="w-6 h-6 transition-colors duration-300"
-                                    style={{ color }}
-                                />
+                                {React.createElement(SelectedIcon, {
+                                    className: "w-6 h-6 transition-colors duration-300",
+                                    style: { color },
+                                })}
                             </span>
 
                             <div className="flex-1 min-w-0 text-right">

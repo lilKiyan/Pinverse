@@ -1,15 +1,10 @@
-// ═══════════════════════════════════════════════
-// 🛰️ Service Worker — Pinverse
-// استراتژی: API هرگز | تصاویر Cache-First | صفحات Network-First
-// ═══════════════════════════════════════════════
 
-const VERSION = 'v2'
+const VERSION = 'v1795259019297'
 const STATIC_CACHE = `pinverse-static-${VERSION}`
 const IMAGE_CACHE = `pinverse-images-${VERSION}`
 const PAGES_CACHE = `pinverse-pages-${VERSION}`
-const MAX_IMAGES = 80   // سقف کش تصاویر — که بی‌نهایت رشد نکند
+const MAX_IMAGES = 80  
 
-// ── نصب: پیش‌ذخیره صفحات هسته ──
 self.addEventListener('install', (event) => {
     event.waitUntil(
         caches.open(PAGES_CACHE).then((cache) => cache.addAll(['/', '/offline.html']))
@@ -17,7 +12,6 @@ self.addEventListener('install', (event) => {
     self.skipWaiting()
 })
 
-// ── فعال‌سازی: پاک‌سازی کش نسخه‌های قبلی ──
 self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys()
@@ -30,40 +24,32 @@ self.addEventListener('activate', (event) => {
     )
 })
 
-// ── رهگیری هر درخواست ──
 self.addEventListener('fetch', (event) => {
     const { request } = event
 
-    // اکشن‌ها (POST/PUT/DELETE) هرگز مداخله نمی‌شوند
     if (request.method !== 'GET') return
 
     const url = new URL(request.url)
 
-    // ❌ API — داده زنده (چت/اعلان/پین) هرگز کش نمی‌شود
     if (url.pathname.startsWith('/api/')) return
 
-    // 🖼️ تصاویر Cloudinary → Cache-First
     if (url.hostname === 'res.cloudinary.com') {
         event.respondWith(cacheFirst(request, IMAGE_CACHE))
         return
     }
 
-    // 📦 assets هش‌دار Next → Cache-First
     if (url.pathname.startsWith('/_next/static/')) {
         event.respondWith(cacheFirst(request, STATIC_CACHE))
         return
     }
 
-    // 🧭 ناوبری صفحات → Network-First + fallback آفلاین
     if (request.mode === 'navigate') {
         event.respondWith(networkFirst(request, PAGES_CACHE))
         return
     }
 
-    // بقیه درخواست‌ها → رفتار پیش‌فرض مرورگر
 })
 
-// ── استراتژی ۱: اول کش، بعد شبکه ──
 async function cacheFirst(request, cacheName) {
     const cached = await caches.match(request)
     if (cached) return cached
@@ -77,7 +63,6 @@ async function cacheFirst(request, cacheName) {
     return res
 }
 
-// ── استراتژی ۲: اول شبکه، بعد کش، آخرش آفلاین ──
 async function networkFirst(request, cacheName) {
     try {
         const res = await fetch(request)
@@ -100,7 +85,6 @@ async function networkFirst(request, cacheName) {
     }
 }
 
-// ── جاروی کش تصاویر (FIFO) ──
 async function trimCache(cacheName, maxEntries) {
     const cache = await caches.open(cacheName)
     const keys = await cache.keys()

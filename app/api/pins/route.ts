@@ -37,35 +37,35 @@ export async function GET(request: Request) {
             ? { reports: { none: { reporterId: user.id } } }
             : {}
 
-        const [pins, totalCount] = await Promise.all([
-            prisma.pin.findMany({
-                where: {
-                    AND: [reportedFilter, categoryFilter],
+        // دریافت یک پین بیشتر (limit + 1) تا بدون نیاز به count متوجه وجود صفحه بعد بشویم
+        const rawPins = await prisma.pin.findMany({
+            where: {
+                AND: [reportedFilter, categoryFilter],
+            },
+            orderBy: { createdAt: 'desc' },
+            skip,
+            take: limit + 1,
+            include: {
+                // فقط سیوهای خود این کاربر گرفته می‌شود نه همه سیوهای دیتابیس
+                saves: {
+                    where: user ? { userId: user.id } : { userId: '__NONE__' },
+                    include: {
+                        board: {
+                            select: { id: true, name: true },
+                        },
+                    },
                 },
-                orderBy: { createdAt: 'desc' },
-                skip,
-                take: limit,
-                include: {
-                    saves: {
-                        include: { board: true },
-                    },
-                    category: {                       
-                        select: { slug: true, name: true, icon: true, color: true },
-                    },
+                category: {                       
+                    select: { slug: true, name: true, icon: true, color: true },
+                },
+            },
+        })
 
-                },
-            }),
-            prisma.pin.count({
-                where: {
-                    AND: [reportedFilter, categoryFilter],   
-                },
-            }),
-        ])
+        const hasMore = rawPins.length > limit
+        const pins = hasMore ? rawPins.slice(0, limit) : rawPins
 
         const pinsWithMeta = pins.map((pin) => {
-            const userSaves = user
-                ? pin.saves.filter((s) => s.userId === user.id)
-                : []
+            const userSaves = user ? pin.saves : []
 
             return {
                 id: pin.id,
@@ -93,8 +93,6 @@ export async function GET(request: Request) {
                 })),
             }
         })
-
-        const hasMore = skip + pins.length < totalCount
 
         return NextResponse.json({ pins: pinsWithMeta, hasMore },
             {

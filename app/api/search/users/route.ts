@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import type { Prisma } from '@prisma/client'
 
 // نرمال‌سازی متن فارسی (یکسان‌سازی حروف عربی و فارسی)
 function normalizeText(text: string): string {
@@ -30,34 +31,41 @@ export async function GET(request: Request) {
 
     const qNormalized = normalizeText(q)
 
-    console.log('🔍 Search query:', q, '→', qNormalized)
+    // جستجوی مستقیم در دیتابیس به جای لود تمام کاربران در رم سرور
+    const searchConditions: Prisma.UserWhereInput[] = [
+      { username: { contains: q, mode: 'insensitive' } },
+      { name: { contains: q, mode: 'insensitive' } },
+    ]
 
-    // همه‌ی کاربرا رو می‌گیریم و در JS فیلتر می‌کنیم
-    // (چون SQLite case-sensitive هست و از نرمال‌سازی پشتیبانی نمی‌کنه)
-    const allUsers = await prisma.user.findMany({
+    if (qNormalized !== q.toLowerCase()) {
+      searchConditions.push(
+        { username: { contains: qNormalized, mode: 'insensitive' } },
+        { name: { contains: qNormalized, mode: 'insensitive' } }
+      )
+    }
+
+    const matchedUsers = await prisma.user.findMany({
+      where: {
+        AND: [
+          currentUser ? { id: { not: currentUser.id } } : {},
+          { OR: searchConditions },
+        ],
+      },
       select: {
         id: true,
         name: true,
         username: true,
         avatar: true,
         bio: true,
+        _count: {
+          select: { following: true }, // تعداد دنبال‌کنندگان
+        },
       },
+      take: 20,
       orderBy: { username: 'asc' },
     })
 
-    const matchedUsers = allUsers
-      .filter((u) => {
-        const nameNorm = normalizeText(u.name || '')
-        const usernameNorm = normalizeText(u.username || '')
-
-        return (
-          nameNorm.includes(qNormalized) ||
-          usernameNorm.includes(qNormalized)
-        )
-      })
-      .slice(0, 20) // حداکثر ۲۰ نتیجه
-
-    // اگه کاربر لاگین باشه، بفهم کدوم‌ها رو فالو کرده
+    // بررسی وضعیت فالو فقط برای کاربران پیدا شده
     let followingIds = new Set<string>()
     if (currentUser && matchedUsers.length > 0) {
       const follows = await prisma.follow.findMany({
@@ -70,19 +78,15 @@ export async function GET(request: Request) {
       followingIds = new Set(follows.map((f) => f.followingId))
     }
 
-    const result = matchedUsers
-      .filter((u) => u.id !== currentUser?.id) // خود کاربر رو نشون نده
-      .map((u) => ({
-        id: u.id,
-        name: u.name,
-        username: u.username,
-        avatar: u.avatar,
-        bio: u.bio,
-        followersCount: 0, // موقت - بعداً با _count درستش می‌کنیم
-        isFollowing: followingIds.has(u.id),
-      }))
-
-    console.log('✅ Matched users:', result.length)
+    const result = matchedUsers.map((u) => ({
+      id: u.id,
+      name: u.name,
+      username: u.username,
+      avatar: u.avatar,
+      bio: u.bio,
+      followersCount: u._count.following,
+      isFollowing: followingIds.has(u.id),
+    }))
 
     return NextResponse.json({ users: result })
   } catch (error) {

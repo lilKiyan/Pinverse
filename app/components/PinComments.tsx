@@ -131,14 +131,14 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
     }
 
     return (
-        <div className="px-6 py-4 flex flex-col gap-4">
+        <div className="px-4 sm:px-5 py-3 flex flex-col gap-3">
             {/* هدر */}
-            <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-gray-50 ring-1 ring-gray-100 flex items-center justify-center shrink-0">
-                    <FiMessageCircle className="w-4 h-4 text-gray-500" />
+            <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-gray-50 ring-1 ring-gray-100 flex items-center justify-center shrink-0">
+                    <FiMessageCircle className="w-3.5 h-3.5 text-gray-500" />
                 </div>
-                <h2 className="font-bold text-gray-900">دیدگاه‌ها</h2>
-                <span className="text-xs font-extrabold bg-red-50 text-red-600 ring-1 ring-red-100 px-2 py-0.5 rounded-full tabular-nums">
+                <h2 className="text-xs sm:text-sm font-bold text-gray-900">دیدگاه‌ها</h2>
+                <span className="text-[11px] font-extrabold bg-red-50 text-red-600 ring-1 ring-red-100 px-1.5 py-0.5 rounded-full tabular-nums">
                     {comments.length}
                 </span>
                 <div className="flex-1 h-px bg-gradient-to-l from-gray-100 to-transparent" />
@@ -146,23 +146,23 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
 
             {/* لیست کامنت‌ها */}
             {loadingComments ? (
-                <div className="flex justify-center py-8">
+                <div className="flex justify-center py-6">
                     <Spinner size="sm" />
                 </div>
             ) : comments.length === 0 ? (
-                <div className="text-center py-10">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-3xl bg-gradient-to-br from-gray-50 to-gray-100 ring-1 ring-gray-100 flex items-center justify-center rotate-3">
-                        <FiMessageCircle className="w-7 h-7 text-gray-300" />
+                <div className="text-center py-6">
+                    <div className="w-12 h-12 mx-auto mb-2.5 rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100 ring-1 ring-gray-100 flex items-center justify-center rotate-3">
+                        <FiMessageCircle className="w-5 h-5 text-gray-300" />
                     </div>
-                    <p className="text-sm text-gray-500 font-bold">اولین دیدگاه را شما بنویسید</p>
-                    <p className="text-xs text-gray-400 mt-1">نظر شما به این پین جان می‌دهد !</p>
+                    <p className="text-xs font-bold text-gray-600">اولین دیدگاه را شما بنویسید</p>
+                    <p className="text-[11px] text-gray-400 mt-0.5">نظر شما به این پین جان می‌دهد!</p>
                 </div>
             ) : (
                 <div className="relative">
-                    <div className="pointer-events-none absolute top-0 inset-x-0 h-8 bg-gradient-to-b from-white to-transparent z-10 rounded-t-2xl" />
-                    <div className="pointer-events-none absolute bottom-0 inset-x-0 h-8 bg-gradient-to-b from-transparent to-white z-10 rounded-b-2xl" />
+                    <div className="pointer-events-none absolute top-0 inset-x-0 h-6 bg-gradient-to-b from-white to-transparent z-10 rounded-t-xl" />
+                    <div className="pointer-events-none absolute bottom-0 inset-x-0 h-6 bg-gradient-to-b from-transparent to-white z-10 rounded-b-xl" />
 
-                    <div className="space-y-2 max-h-[40vh] md:max-h-[50vh] overflow-y-auto scroll-smooth px-1 py-2
+                    <div className="space-y-1.5 max-h-[35vh] md:max-h-[42vh] overflow-y-auto scroll-smooth px-0.5 py-1.5
                         [&::-webkit-scrollbar]:w-1.5
                         [&::-webkit-scrollbar-thumb]:bg-gray-200
                         [&::-webkit-scrollbar-thumb]:hover:bg-gray-300
@@ -174,16 +174,16 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                             return (
                                 <div
                                     key={comment.id}
-                                    className="group/comment flex items-start gap-3 p-2 rounded-2xl hover:bg-gray-50/70 mt-2 transition-all duration-200 animate-[commentIn_0.35s_ease-out_backwards]"
+                                    className="group/comment flex items-start gap-2.5 p-1.5 rounded-xl hover:bg-gray-50/70 transition-all duration-200 animate-[commentIn_0.35s_ease-out_backwards]"
                                     style={{ animationDelay: `${Math.min(index * 45, 400)}ms` }}
                                 >
-                                    <div className="w-9 h-9 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-gray-600 text-sm font-bold ring-2 ring-white shadow-sm">
+                                    <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-gray-600 text-xs font-bold ring-2 ring-white shadow-sm">
                                         {comment.user?.avatar ? (
                                             <Image
                                                 src={comment.user.avatar}
                                                 alt=""
-                                                width={36}
-                                                height={36}
+                                                width={32}
+                                                height={32}
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
@@ -193,17 +193,17 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
 
                                     <div className="flex-1 min-w-0">
                                         <div
-                                            className={`rounded-2xl px-4 py-3 ring-1 transition-all duration-200 ${isMine
+                                            className={`rounded-xl sm:rounded-2xl px-3 py-2 ring-1 transition-all duration-200 ${isMine
                                                 ? 'bg-gradient-to-br from-red-50/80 to-rose-50/50 ring-red-100/80'
                                                 : 'bg-gray-50/80 ring-gray-100 group-hover/comment:bg-white group-hover/comment:ring-gray-200'
                                                 }`}
                                         >
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className={`text-[12px] font-extrabold truncate ${isMine ? 'text-red-700' : 'text-gray-900'}`}>
+                                            <div className="flex items-center gap-2 mb-0.5">
+                                                <span className={`text-[11px] font-extrabold truncate ${isMine ? 'text-red-700' : 'text-gray-900'}`}>
                                                     {comment.user?.name || comment.user?.username || 'کاربر'}
                                                 </span>
                                                 {isMine && (
-                                                    <span className="shrink-0 text-[10px] font-bold bg-red-100 text-red-600 px-1.5 py-0.5 rounded-md">
+                                                    <span className="shrink-0 text-[9px] font-bold bg-red-100 text-red-600 px-1 py-0.2 rounded">
                                                         شما
                                                     </span>
                                                 )}
@@ -216,15 +216,15 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                                                             onClick={() => openDeleteCommentModal(comment)}
                                                             title="حذف کامنت"
                                                             aria-label="حذف کامنت"
-                                                            className="w-6 h-6 rounded-md flex items-center justify-center text-gray-400 opacity-100 sm:opacity-0 sm:group-hover/comment:opacity-100 hover:text-red-600 hover:bg-red-50 transition-all duration-200 cursor-pointer active:scale-90"
+                                                            className="w-5 h-5 rounded flex items-center justify-center text-gray-400 opacity-100 sm:opacity-0 sm:group-hover/comment:opacity-100 hover:text-red-600 hover:bg-red-50 transition-all duration-200 cursor-pointer active:scale-90"
                                                         >
-                                                            <FiTrash2 className="w-3 h-3" />
+                                                            <FiTrash2 className="w-2.5 h-2.5" />
                                                         </button>
                                                     )}
                                                 </span>
                                             </div>
 
-                                            <p className="text-sm text-gray-700 leading-relaxed break-words whitespace-pre-wrap">
+                                            <p className="text-xs sm:text-sm text-gray-700 leading-relaxed break-words whitespace-pre-wrap">
                                                 {comment.content}
                                             </p>
                                         </div>
@@ -237,10 +237,10 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
             )}
 
             {/* فرم افزودن دیدگاه */}
-            <div className="flex items-start gap-3 mt-1">
-                <div className="w-9 h-9 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white text-sm font-bold ring-2 ring-white shadow-md shadow-red-100">
+            <div className="flex items-start gap-2.5 mt-0.5">
+                <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white shadow-sm shadow-red-100">
                     {user?.avatar ? (
-                        <Image src={user.avatar} alt="" className="w-full h-full object-cover" width={36} height={36} />
+                        <Image src={user.avatar} alt="" className="w-full h-full object-cover" width={32} height={32} />
                     ) : (
                         user?.username?.charAt(0).toUpperCase() || '؟'
                     )}
@@ -259,17 +259,17 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                                 }
                             }}
                             placeholder="دیدگاه خود را بنویسید..."
-                            className={`w-full bg-gray-50 ring-1 rounded-full pr-4 pl-28 md:pl-37 py-3 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 transition-all duration-200 ${isOverLimit
+                            className={`w-full bg-gray-50 ring-1 rounded-full pr-3.5 pl-24 md:pl-28 py-2 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 transition-all duration-200 ${isOverLimit
                                 ? 'ring-red-300 focus:ring-red-400'
                                 : 'ring-gray-200/70 focus:ring-red-300/60'
                                 }`}
                         />
 
-                        <div className="absolute left-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                        <div className="absolute left-1 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
                             {/* پیل شمارنده */}
                             {newComment.length > 0 && (
                                 <span
-                                    className={`inline-flex items-center gap-0.5 h-6 px-2 rounded-full text-[10px] font-bold tabular-nums transition-all duration-200 ${isOverLimit
+                                    className={`inline-flex items-center gap-0.5 h-5 px-1.5 rounded-full text-[9px] font-bold tabular-nums transition-all duration-200 ${isOverLimit
                                         ? 'bg-red-100 text-red-600 ring-1 ring-red-300 animate-pulse'
                                         : isNearLimit
                                             ? 'bg-orange-100 text-orange-600 ring-1 ring-orange-200'
@@ -286,13 +286,13 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                                 type="submit"
                                 disabled={!newComment.trim() || isOverLimit}
                                 aria-label="ارسال کامنت"
-                                className={`h-8 px-3.5 rounded-full flex items-center gap-1.5 text-xs font-bold transition-all duration-200 cursor-pointer ${newComment.trim() && !isOverLimit
-                                    ? 'bg-gradient-to-l from-red-500 to-rose-600 text-white shadow-md shadow-red-200 hover:shadow-lg hover:shadow-red-300/60 hover:brightness-105 active:scale-95'
+                                className={`h-7 px-3 rounded-full flex items-center gap-1 text-[11px] font-bold transition-all duration-200 cursor-pointer ${newComment.trim() && !isOverLimit
+                                    ? 'bg-gradient-to-l from-red-500 to-rose-600 text-white shadow-sm shadow-red-200 hover:shadow-md hover:brightness-105 active:scale-95'
                                     : 'bg-gray-200/80 text-gray-400 cursor-not-allowed'
                                     }`}
                             >
                                 ارسال
-                                <FiSend className="w-3 h-3 -scale-x-100" />
+                                <FiSend className="w-2.5 h-2.5 -scale-x-100" />
                             </button>
                         </div>
                     </form>

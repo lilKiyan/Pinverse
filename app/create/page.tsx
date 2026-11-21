@@ -1,12 +1,28 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
-import { FiUpload, FiImage, FiType, FiAlignLeft, FiAlertCircle, FiX, FiFile, FiCheckCircle, FiTag } from 'react-icons/fi'
+import {
+    FiUpload,
+    FiImage,
+    FiType,
+    FiAlignLeft,
+    FiAlertCircle,
+    FiX,
+    FiFile,
+    FiCheck,
+    FiCheckCircle,
+    FiTag,
+    FiLogIn,
+    FiArrowRight,
+    FiTrash2,
+    FiRefreshCw,
+} from 'react-icons/fi'
 import { compressImage } from '@/lib/imageCompress'
 import { getCategoryIcon } from '@/lib/categories'
+import { useAuthStore } from '@/lib/authStore'
 
 type CreatePinInput = {
     title: string
@@ -17,24 +33,66 @@ type CreatePinInput = {
     category: string
 }
 
+type CategoryItem = {
+    slug: string
+    name: string
+    icon: string
+    color: string
+}
+
 export default function CreatePage() {
     const router = useRouter()
     const queryClient = useQueryClient()
+    const fileInputRef = useRef<HTMLInputElement | null>(null)
+    const { user } = useAuthStore()
 
-    // ── State های UI ──
+    const { data: meData, isLoading: checkingAuth } = useQuery({
+        queryKey: ['me'],
+        queryFn: async () => {
+            const res = await fetch('/api/auth/me')
+            if (!res.ok) return null
+            const data = await res.json()
+            return data.user
+        },
+        enabled: !user,
+        staleTime: 60 * 1000,
+    })
+
+    const { data: categoriesData, isLoading: loadingCategories } = useQuery<{
+        categories: CategoryItem[]
+    }>({
+        queryKey: ['categories-all'],
+        queryFn: async () => {
+            const res = await fetch('/api/categories')
+            if (!res.ok) throw new Error('خطا در دریافت دسته‌بندی‌ها')
+            return res.json()
+        },
+        staleTime: 5 * 60 * 1000,
+    })
+
+    const currentUser = user || meData
+    const categories = categoriesData?.categories ?? []
+
+    // ── State های فرم و UI ──
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null)
     const [previewUrl, setPreviewUrl] = useState('')
     const [isPreparing, setIsPreparing] = useState(false)
+    const [isDragging, setIsDragging] = useState(false)
     const [submitError, setSubmitError] = useState('')
     const [compressionInfo, setCompressionInfo] = useState<{ from: number; to: number } | null>(null)
     const [category, setCategory] = useState('other')
 
+    useEffect(() => {
+        return () => {
+            if (previewUrl) URL.revokeObjectURL(previewUrl)
+        }
+    }, [previewUrl])
+
     const createPinMutation = useMutation({
         mutationFn: async ({ title, description, file, width, height, category }: CreatePinInput) => {
-            // ۱. آپلود تصویر (از قبل فشرده شده)
             const formData = new FormData()
             formData.append('file', file)
 
@@ -50,7 +108,6 @@ export default function CreatePage() {
 
             const { imageUrl } = await uploadRes.json()
 
-            // ۲. ساخت پین — با ابعاد واقعی از فشرده‌ساز + دسته‌بندی
             const pinRes = await fetch('/api/pins', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -74,22 +131,21 @@ export default function CreatePage() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['pins'], refetchType: 'all' })
             queryClient.invalidateQueries({ queryKey: ['my-pins'], refetchType: 'all' })
+            queryClient.invalidateQueries({ queryKey: ['categories-all'] })
             router.push('/')
         },
     })
 
-    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
+    const processFile = async (file: File) => {
+        if (!file.type.startsWith('image/')) {
+            setSubmitError('لطفاً فقط فایل تصویری (PNG، JPG، WEBP یا GIF) انتخاب کنید')
+            return
+        }
 
-        e.target.value = ''
         setSubmitError('')
-
         setIsPreparing(true)
         try {
             const { file: compressed, width, height, wasCompressed } = await compressImage(file)
-
-            if (previewUrl) URL.revokeObjectURL(previewUrl)
 
             setSelectedFile(compressed)
             setDimensions({ width, height })
@@ -102,12 +158,36 @@ export default function CreatePage() {
         }
     }
 
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        e.target.value = ''
+        if (!file) return
+        await processFile(file)
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        if (!isDragging) setIsDragging(true)
+    }
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault()
+        setIsDragging(false)
+    }
+
+    const handleDrop = async (e: React.DragEvent) => {
+        e.preventDefault()
+        setIsDragging(false)
+        const file = e.dataTransfer.files?.[0]
+        if (file) await processFile(file)
+    }
+
     const handleRemoveFile = () => {
-        if (previewUrl) URL.revokeObjectURL(previewUrl)
         setSelectedFile(null)
         setDimensions(null)
         setPreviewUrl('')
         setCompressionInfo(null)
+        setSubmitError('')
     }
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -130,299 +210,493 @@ export default function CreatePage() {
         return `${(bytes / (1024 * 1024)).toFixed(1)} مگابایت`
     }
 
-    const { data: categoriesData } = useQuery<{ categories: { slug: string; name: string; icon: string; color: string }[] }>({
-        queryKey: ['categories-all'],
-        queryFn: async () => {
-            const res = await fetch('/api/categories')
-            if (!res.ok) throw new Error('خطا')
-            return res.json()
-        },
-        staleTime: 5 * 60 * 1000,
-    })
-    const categories = categoriesData?.categories ?? []
+    const savedPercent = compressionInfo
+        ? Math.max(1, Math.round((1 - compressionInfo.to / compressionInfo.from) * 100))
+        : null
 
-    const isFormValid = title.trim() && selectedFile && dimensions && !isPreparing
+    const hasImage = Boolean(selectedFile && dimensions)
+    const hasTitle = Boolean(title.trim())
+    const isFormValid = hasImage && hasTitle && !isPreparing
     const loading = createPinMutation.isPending
-    const error = createPinMutation.error
+    const activeError = (createPinMutation.error as Error | null)?.message || submitError
+    const selectedCategoryObj = categories.find((c) => c.slug === category)
+
+    if (checkingAuth && !currentUser) {
+        return (
+            <main dir="rtl" className="min-h-[75vh] flex items-center justify-center bg-[#FAFAFB]">
+                <span className="w-7 h-7 border-[3px] border-gray-200 border-t-red-600 rounded-full animate-spin" />
+            </main>
+        )
+    }
+
+    if (!currentUser) {
+        return (
+            <main
+                dir="rtl"
+                className="relative min-h-[82vh] flex flex-col items-center justify-center px-4 overflow-hidden bg-[#FAFAFB] pb-24 lg:pb-8"
+            >
+                <div className="pointer-events-none absolute -top-24 right-1/3 h-80 w-80 rounded-full bg-rose-200/35 blur-3xl" />
+                <div className="relative z-10 w-full max-w-md rounded-3xl bg-white/95 backdrop-blur-xl p-8 text-center shadow-xl shadow-gray-200/60 ring-1 ring-gray-200/70 space-y-5 animate-[fadeInUp_0.35s_ease-out]">
+                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/25">
+                        <FiUpload className="h-6 w-6" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <h2 className="text-lg font-extrabold text-gray-900">
+                            برای ساخت پین وارد شوید
+                        </h2>
+                        <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">
+                            برای اشتراک‌گذاری ایده‌ها و تصاویر خود در Pinverse، ابتدا وارد حساب کاربری شوید.
+                        </p>
+                    </div>
+                    <div className="pt-2 flex flex-col gap-2.5">
+                        <Link
+                            href="/login"
+                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 py-3 text-sm font-bold text-white shadow-md shadow-red-500/20 hover:brightness-105 active:scale-[0.98] transition-all no-underline"
+                        >
+                            <FiLogIn className="h-4 w-4" />
+                            ورود به حساب کاربری
+                        </Link>
+                        <Link
+                            href="/"
+                            className="w-full py-2 text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors no-underline"
+                        >
+                            بازگشت به صفحه اصلی
+                        </Link>
+                    </div>
+                </div>
+            </main>
+        )
+    }
 
     return (
         <main
             dir="rtl"
-            className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-50 via-white to-red-50/40 px-4 py-8"
+            className="relative min-h-screen overflow-hidden bg-[#FAFAFB] px-4 sm:px-6 py-6 sm:py-8 pb-24 lg:pb-12"
         >
-            <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-100/50 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-32 -right-32 w-[28rem] h-[28rem] bg-orange-100/40 rounded-full blur-3xl pointer-events-none" />
+            {/* هاله‌های لطیف پس‌زمینه */}
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute -top-28 right-1/4 h-80 w-80 rounded-full bg-rose-200/30 blur-3xl"
+            />
+            <div
+                aria-hidden="true"
+                className="pointer-events-none absolute bottom-10 -left-24 h-72 w-72 rounded-full bg-orange-200/25 blur-3xl"
+            />
 
-            {/* هدر */}
-            <div className="flex items-center gap-4 mb-12">
-                <div className="md:w-14 md:h-14 w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 shadow-lg shadow-red-200/60 flex items-center justify-center shrink-0">
-                    <FiUpload className="md:w-6 md:h-6 w-5 h-5 text-white" />
-                </div>
-                <div>
-                    <h1 className="text-xl md:text-3xl font-extrabold bg-gradient-to-l from-red-600 to-rose-600 bg-clip-text text-transparent tracking-tight">
-                        ساخت پین جدید
-                    </h1>
-                    <p className="text-[10px] md:text-sm text-gray-500 mt-1">
-                        یه تصویر انتخاب کن، دسته‌بندی کن و منتشرش کن
-                    </p>
-                </div>
-            </div>
+            <div className="relative mx-auto max-w-5xl">
+                {/* ═══ هدر استاندارد و جمع‌وجور ═══ */}
+                <header className="mb-6 flex items-center justify-between gap-4 animate-[fadeInUp_0.35s_ease-out_both]">
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/"
+                            aria-label="بازگشت به خانه"
+                            className="group flex h-9 w-9 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl
+                                bg-white text-gray-500 ring-1 ring-gray-200/90 shadow-2xs
+                                hover:bg-gray-900 hover:text-white hover:ring-gray-900
+                                transition-all duration-200 active:scale-95 no-underline"
+                        >
+                            <FiArrowRight className="h-4 w-4" />
+                        </Link>
 
-            <div className="relative max-w-4xl mx-auto">
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* ── خطای mutation ── */}
-                    {error && (
-                        <div className="flex items-center gap-3 bg-white/90 backdrop-blur-md border border-red-200/80 text-red-600 px-5 py-4 rounded-2xl shadow-lg shadow-red-100/50 animate-[fadeInUp_0.3s_ease-out]">
-                            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                                <FiAlertCircle className="w-5 h-5" />
-                            </div>
-                            <span className="font-semibold text-sm">
-                                {(error as Error).message}
-                            </span>
-                        </div>
-                    )}
-
-                    {/* ── خطای فشرده‌سازی ── */}
-                    {submitError && (
-                        <div className="flex items-center gap-3 bg-white/90 backdrop-blur-md border border-red-200/80 text-red-600 px-5 py-4 rounded-2xl shadow-lg shadow-red-100/50 animate-[fadeInUp_0.3s_ease-out]">
-                            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                                <FiAlertCircle className="w-5 h-5" />
-                            </div>
-                            <span className="font-semibold text-sm">{submitError}</span>
-                        </div>
-                    )}
-
-                    {/* ── کارت اصلی ── */}
-                    <div className="bg-white/90 backdrop-blur-xl rounded-[2rem] shadow-xl shadow-gray-200/50 ring-1 ring-black/5 overflow-hidden">
-                        <div className="h-1.5 bg-gradient-to-r from-red-500 via-rose-500 to-orange-400" />
-
-                        <div className="p-5 md:p-8">
-                            <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.15fr] gap-8">
-                                {/* ═══ ۱. آپلود تصویر ═══ */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-2.5">
-                                        <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-                                            <span className="w-6 h-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-[11px] font-extrabold">۱</span>
-                                            <FiImage className="w-4 h-4 text-gray-400" />
-                                            تصویر
-                                        </label>
-                                        {previewUrl && (
-                                            <span className="flex items-center gap-1 text-xs font-bold text-green-600">
-                                                <FiCheckCircle className="w-3.5 h-3.5" />
-                                                انتخاب شد
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <label className="group relative block w-full rounded-2xl cursor-pointer overflow-hidden bg-gray-50 border-2 border-dashed transition-all duration-300 border-gray-200 hover:border-red-300 hover:shadow-lg hover:shadow-red-100/40">
-                                        {previewUrl ? (
-                                            <>
-                                                <img
-                                                    src={previewUrl}
-                                                    alt="پیش‌نمایش"
-                                                    className="w-full h-auto max-h-[65vh] object-contain"
-                                                />
-
-                                                <span className="absolute top-3 left-3 flex items-center gap-1.5 text-white text-xs font-bold
-                                                    bg-black/55 hover:bg-black/70 backdrop-blur-md px-3.5 py-2 rounded-full
-                                                    ring-1 ring-white/30 shadow-lg transition-all duration-200
-                                                    opacity-0 group-hover:opacity-100">
-                                                    <FiUpload className="w-3.5 h-3.5" />
-                                                    تغییر تصویر
-                                                </span>
-
-                                                {isPreparing && (
-                                                    <div className="absolute inset-0 bg-white/70 backdrop-blur-sm flex items-center justify-center">
-                                                        <span className="w-6 h-6 border-[3px] border-red-100 border-t-red-500 rounded-full animate-spin" />
-                                                    </div>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center px-6 text-center aspect-[4/5]">
-                                                <div className="relative mb-4">
-                                                    <div className="absolute inset-0 bg-red-200/50 rounded-full blur-xl scale-125 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                                    <div className="relative w-16 h-16 rounded-2xl bg-white shadow-md ring-1 ring-black/5 flex items-center justify-center mb-1 group-hover:scale-110 group-hover:-rotate-6 group-hover:text-red-500 transition-all duration-300">
-                                                        <FiUpload className="text-2xl" />
-                                                    </div>
-                                                </div>
-                                                <span className="text-sm font-bold text-gray-700">
-                                                    برای انتخاب تصویر کلیک کن
-                                                </span>
-                                                <span className="text-xs text-gray-400 mt-1.5 bg-white ring-1 ring-gray-100 px-2.5 py-1 rounded-full">
-                                                    PNG، JPG یا GIF — تا ۱۰ مگابایت
-                                                </span>
-
-                                                {isPreparing && (
-                                                    <span className="mt-3 flex items-center gap-2 text-xs font-bold text-red-500">
-                                                        <span className="w-4 h-4 border-2 border-red-100 border-t-red-500 rounded-full animate-spin" />
-                                                        در حال آماده‌سازی تصویر...
-                                                    </span>
-                                                )}
-                                            </div>
-                                        )}
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            onChange={handleFileChange}
-                                            className="hidden"
-                                        />
-                                    </label>
-
-                                    {selectedFile && (
-                                        <div className="mt-3 flex items-center gap-2.5 bg-gray-50 ring-1 ring-gray-100 rounded-xl px-3 py-2.5 animate-[fadeInUp_0.25s_ease-out]">
-                                            <div className="w-8 h-8 rounded-lg bg-white ring-1 ring-gray-200 flex items-center justify-center shrink-0">
-                                                <FiFile className="w-4 h-4 text-red-500" />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="text-xs font-bold text-gray-700 truncate">
-                                                    {selectedFile.name}
-                                                </p>
-                                                <p className="text-[11px] text-gray-400 tabular-nums">
-                                                    {formatFileSize(selectedFile.size)}
-                                                    {compressionInfo && (
-                                                        <span className="text-green-600 font-bold">
-                                                            {' '}· فشرده شد از {formatFileSize(compressionInfo.from)} ✓
-                                                        </span>
-                                                    )}
-                                                </p>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={(e) => {
-                                                    e.preventDefault()
-                                                    handleRemoveFile()
-                                                }}
-                                                title="حذف تصویر"
-                                                className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-gray-300 hover:text-red-600 hover:bg-red-50 transition-all cursor-pointer active:scale-90"
-                                            >
-                                                <FiX className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* ═══ ستون اطلاعات: عنوان + توضیحات ═══ */}
-                                <div className="flex flex-col gap-6">
-                                    {/* ── ۲. عنوان پین ── */}
-                                    <div>
-                                        <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2.5">
-                                            <span className="w-6 h-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-[11px] font-extrabold">۲</span>
-                                            <FiType className="w-4 h-4 text-gray-400" />
-                                            عنوان پین
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={title}
-                                            onChange={(e) => setTitle(e.target.value)}
-                                            placeholder="مثلاً ایده طراحی اتاق خواب"
-                                            className="w-full placeholder:text-sm bg-gray-50 border-2 border-transparent rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all duration-200"
-                                        />
-                                    </div>
-
-                                    {/* ── ۴. توضیحات ── */}
-                                    <div className="flex-1 flex flex-col">
-                                        <div className="flex items-center justify-between mb-2.5">
-                                            <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700">
-                                                <span className="w-6 h-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-[11px] font-extrabold">۴</span>
-                                                <FiAlignLeft className="w-4 h-4 text-gray-400" />
-                                                توضیحات
-                                                <span className="text-gray-400 font-normal">(اختیاری)</span>
-                                            </label>
-                                            <span className={`text-xs font-bold tabular-nums px-2 py-0.5 rounded-full transition-colors ${description.length > 0
-                                                ? 'bg-red-50 text-red-500 ring-1 ring-red-100'
-                                                : 'bg-gray-50 text-gray-300 ring-1 ring-gray-100'
-                                                }`}>
-                                                {description.length}
-                                            </span>
-                                        </div>
-                                        <textarea
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            rows={6}
-                                            placeholder="درباره این پین بنویس..."
-                                            className="w-full flex-1 bg-gray-50 border-2 border-transparent rounded-2xl px-4 py-3.5 text-gray-900 placeholder-gray-400 focus:outline-none focus:bg-white focus:border-red-300 focus:ring-4 focus:ring-red-50 transition-all duration-200 resize-none leading-relaxed"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* ═══ ۳. دسته‌بندی — تمام‌عرض، برادر مستقل ═══ */}
-                                <div className="lg:col-span-2">
-                                    <label className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 mb-2.5">
-                                        <span className="w-6 h-6 rounded-lg bg-red-50 text-red-600 flex items-center justify-center text-[11px] font-extrabold">۳</span>
-                                        <FiTag className="w-4 h-4 text-gray-400" />
-                                        دسته‌بندی
-                                    </label>
-
-                                    <div className="grid grid-cols-4 md:grid-cols-8 gap-1.5">
-                                        {categories.map((cat) => {
-                                            const isActive = category === cat.slug
-                                            const Icon = getCategoryIcon(cat.icon)
-
-                                            return (
-                                                <button
-                                                    key={cat.slug}
-                                                    type="button"
-                                                    onClick={() => setCategory(cat.slug)}
-                                                    className={`flex flex-col items-center justify-center gap-1.5 py-3 px-1 rounded-xl
-                                                        transition-all duration-200 cursor-pointer text-center
-                                                        ${isActive
-                                                            ? 'shadow-md'
-                                                            : 'ring-1 ring-gray-100 bg-gray-50 hover:bg-gray-100 hover:ring-gray-200'
-                                                        }`}
-                                                    style={isActive ? {
-                                                        backgroundColor: `${cat.color}14`,
-                                                        boxShadow: `0 0 0 2px ${cat.color}`,
-                                                    } : undefined}
-                                                >
-                                                    <Icon
-                                                        className="w-5 h-5"
-                                                        style={{ color: isActive ? cat.color : undefined }}
-                                                    />
-                                                    <span className={`text-[10px] font-bold leading-tight
-                                                        ${isActive ? 'text-gray-900' : 'text-gray-500'}`}>
-                                                        {cat.name}
-                                                    </span>
-                                                </button>
-                                            )
-                                        })}
-                                    </div>
-                                </div>
-                            </div>
+                        <div>
+                            <h1 className="text-base sm:text-xl font-extrabold text-gray-900 tracking-tight">
+                                ساخت پین جدید
+                            </h1>
+                            <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">
+                                تصویر را آپلود کن، عنوان بنویس و در دسته‌بندی مناسب منتشر کن
+                            </p>
                         </div>
                     </div>
 
-                    {/* ── نوار دکمه‌ها ── */}
-                    <div className="sticky bottom-4 z-30 mb-24 md:mb-0">
-                        <div className="bg-white/80 backdrop-blur-xl rounded-2xl ring-1 ring-black/5 shadow-2xl shadow-gray-300/40 p-3 flex items-center gap-3">
-                            <button
-                                type="submit"
-                                disabled={loading || isPreparing || !isFormValid}
-                                className="flex-1 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold py-3.5 rounded-xl transition-all duration-200 shadow-lg shadow-red-200/70 hover:shadow-xl hover:shadow-red-300/60 hover:brightness-105 active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:brightness-100 cursor-pointer flex items-center justify-center gap-2"
-                            >
-                                {isPreparing ? (
-                                    <>
-                                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                        آماده‌سازی تصویر...
-                                    </>
-                                ) : loading ? (
-                                    <>
-                                        <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                        در حال ساخت...
-                                    </>
-                                ) : (
-                                    <>
-                                        <FiUpload className="w-4 h-4" />
-                                        انتشار پین
-                                    </>
-                                )}
-                            </button>
+                    <div className="hidden sm:flex items-center gap-2 rounded-full bg-white/90 px-3.5 py-1.5 ring-1 ring-gray-200/80 text-xs">
+                        <span className={`flex items-center gap-1 font-semibold ${hasImage ? 'text-emerald-600' : 'text-gray-400'}`}>
+                            <FiCheckCircle className="h-3.5 w-3.5" />
+                            تصویر
+                        </span>
+                        <span className="h-3 w-px bg-gray-200" />
+                        <span className={`flex items-center gap-1 font-semibold ${hasTitle ? 'text-emerald-600' : 'text-gray-400'}`}>
+                            <FiCheckCircle className="h-3.5 w-3.5" />
+                            عنوان
+                        </span>
+                    </div>
+                </header>
 
-                            <Link
-                                href="/"
-                                className="shrink-0 px-5 py-3.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-sm transition-colors no-underline"
-                            >
-                                انصراف
-                            </Link>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* ── باکس خطا ── */}
+                    {activeError && (
+                        <div className="flex items-center justify-between gap-3 rounded-2xl bg-red-50/90 px-4 py-3.5 text-red-700 ring-1 ring-red-200/80 animate-[fadeInUp_0.25s_ease-out]">
+                            <div className="flex items-center gap-2.5">
+                                <FiAlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                                <span className="text-xs sm:text-sm font-semibold">{activeError}</span>
+                            </div>
+                            {submitError && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSubmitError('')}
+                                    className="rounded-lg p-1 text-red-400 hover:bg-red-100 hover:text-red-700 transition-colors cursor-pointer"
+                                >
+                                    <FiX className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* ═══ باکس واحد و هم‌تراز کل فرم ═══ */}
+                    <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-gray-200/80 shadow-sm">
+                        {/* نوار رنگی ظریف بالا */}
+                        <div className="h-1 bg-gradient-to-l from-red-500 via-rose-500 to-orange-400" />
+
+                        {/* ─── ردیف ۱: دو ستون دقیقاً هم‌ارتفاع ─── */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12">
+                            {/* ستون راست: آپلود و پیش‌نمایش تصویر */}
+                            <div className="lg:col-span-5 flex flex-col p-5 sm:p-6 border-b lg:border-b-0 lg:border-l border-gray-100">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <span className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-800">
+                                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                                            <FiImage className="h-3.5 w-3.5" />
+                                        </span>
+                                        تصویر پین
+                                        <span className="text-red-500">*</span>
+                                    </span>
+
+                                    {dimensions && (
+                                        <span
+                                            className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-500 tabular-nums"
+                                            dir="ltr"
+                                        >
+                                            {dimensions.width} × {dimensions.height}
+                                        </span>
+                                    )}
+                                </div>
+
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                    className="hidden"
+                                />
+
+                                {previewUrl ? (
+                                    <div className="flex flex-1 flex-col gap-3">
+                                        <div
+                                            onDragOver={handleDragOver}
+                                            onDragLeave={handleDragLeave}
+                                            onDrop={handleDrop}
+                                            className={`relative flex flex-1 min-h-[260px] max-h-[340px] items-center justify-center overflow-hidden rounded-2xl bg-gray-50 ring-1 transition-all ${
+                                                isDragging
+                                                    ? 'ring-2 ring-red-500 bg-red-50/40'
+                                                    : 'ring-gray-200/80'
+                                            }`}
+                                        >
+                                            <img
+                                                src={previewUrl}
+                                                alt="پیش‌نمایش پین"
+                                                className="max-h-[340px] w-full object-contain"
+                                            />
+
+                                            <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    className="flex items-center gap-1.5 rounded-full bg-gray-900/75 hover:bg-gray-900 backdrop-blur-md
+                                                        px-3 py-1.5 text-[11px] font-bold text-white shadow-md
+                                                        transition-all active:scale-95 cursor-pointer"
+                                                >
+                                                    <FiRefreshCw className="h-3 w-3" />
+                                                    تغییر تصویر
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={handleRemoveFile}
+                                                    aria-label="حذف تصویر"
+                                                    className="flex h-8 w-8 items-center justify-center rounded-full
+                                                        bg-white/90 hover:bg-red-600 text-gray-600 hover:text-white
+                                                        backdrop-blur-md shadow-md ring-1 ring-black/5
+                                                        transition-all active:scale-90 cursor-pointer"
+                                                >
+                                                    <FiTrash2 className="h-3.5 w-3.5" />
+                                                </button>
+                                            </div>
+
+                                            {isPreparing && (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/80 backdrop-blur-sm">
+                                                    <span className="h-6 w-6 border-[3px] border-red-100 border-t-red-600 rounded-full animate-spin" />
+                                                    <span className="text-xs font-bold text-gray-700">در حال بهینه‌سازی...</span>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {selectedFile && (
+                                            <div className="flex items-center gap-2.5 rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-gray-200/60">
+                                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-red-500 ring-1 ring-gray-200/80">
+                                                    <FiFile className="h-4 w-4" />
+                                                </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate text-xs font-bold text-gray-800">
+                                                        {selectedFile.name}
+                                                    </p>
+                                                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-gray-400 tabular-nums">
+                                                        <span>{formatFileSize(selectedFile.size)}</span>
+                                                        {savedPercent && (
+                                                            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200/70">
+                                                                {savedPercent.toLocaleString('fa-IR')}٪ سبک‌تر شد
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current?.click()}
+                                        onDragOver={handleDragOver}
+                                        onDragLeave={handleDragLeave}
+                                        onDrop={handleDrop}
+                                        className={`group flex flex-1 min-h-[280px] lg:min-h-[320px] w-full flex-col items-center justify-center
+                                            rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-all duration-200 cursor-pointer ${
+                                                isDragging
+                                                    ? 'border-red-500 bg-red-50/70 scale-[0.99]'
+                                                    : 'border-gray-200 bg-gray-50/70 hover:border-red-300 hover:bg-red-50/25'
+                                            }`}
+                                    >
+                                        <div
+                                            className={`mb-4 flex h-13 w-13 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-gray-200/80 transition-all duration-300 ${
+                                                isDragging
+                                                    ? 'scale-110 -rotate-6 text-red-600 ring-red-200'
+                                                    : 'text-gray-500 group-hover:scale-110 group-hover:-rotate-6 group-hover:text-red-600'
+                                            }`}
+                                        >
+                                            <FiUpload className="h-5 w-5" />
+                                        </div>
+
+                                        <span className="text-sm font-bold text-gray-800">
+                                            {isDragging ? 'تصویر را همین‌جا رها کن' : 'تصویر را بکش و رها کن یا کلیک کن'}
+                                        </span>
+
+                                        <span className="mt-1.5 text-xs text-gray-400">
+                                            به‌صورت خودکار برای بارگذاری سریع بهینه‌سازی می‌شود
+                                        </span>
+
+                                        <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
+                                            {['JPG', 'PNG', 'WEBP', 'GIF'].map((ext) => (
+                                                <span
+                                                    key={ext}
+                                                    className="rounded-md bg-white px-2 py-0.5 text-[10px] font-bold text-gray-400 ring-1 ring-gray-200/70"
+                                                >
+                                                    {ext}
+                                                </span>
+                                            ))}
+                                            <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-medium text-gray-400 ring-1 ring-gray-200/70">
+                                                تا ۱۰MB
+                                            </span>
+                                        </div>
+
+                                        {isPreparing && (
+                                            <div className="mt-4 flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-red-600 shadow-xs ring-1 ring-red-100">
+                                                <span className="h-3.5 w-3.5 border-2 border-red-200 border-t-red-600 rounded-full animate-spin" />
+                                                در حال آماده‌سازی تصویر...
+                                            </div>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* ستون چپ: عنوان و توضیحات (هم‌ارتفاع با ستون تصویر) */}
+                            <div className="lg:col-span-7 flex flex-col gap-5 p-5 sm:p-6">
+                                {/* عنوان */}
+                                <div>
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <label
+                                            htmlFor="pin-title"
+                                            className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-800"
+                                        >
+                                            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                                                <FiType className="h-3.5 w-3.5" />
+                                            </span>
+                                            عنوان پین
+                                            <span className="text-red-500">*</span>
+                                        </label>
+                                        <span className="text-[11px] text-gray-400 tabular-nums">
+                                            {title.length.toLocaleString('fa-IR')} کاراکتر
+                                        </span>
+                                    </div>
+                                    <input
+                                        id="pin-title"
+                                        type="text"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        placeholder="مثلاً ایده طراحی مینیمال اتاق خواب"
+                                        className="w-full rounded-2xl bg-gray-50/90 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400
+                                            ring-1 ring-gray-200/80
+                                            focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30
+                                            transition-all"
+                                    />
+                                </div>
+
+                                {/* توضیحات — کشیده می‌شود تا هم‌تراز کف باکس تصویر باشد */}
+                                <div className="flex flex-1 flex-col">
+                                    <div className="mb-2 flex items-center justify-between">
+                                        <label
+                                            htmlFor="pin-desc"
+                                            className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-800"
+                                        >
+                                            <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-gray-100 text-gray-500">
+                                                <FiAlignLeft className="h-3.5 w-3.5" />
+                                            </span>
+                                            توضیحات
+                                            <span className="text-[11px] font-normal text-gray-400">(اختیاری)</span>
+                                        </label>
+                                        <span
+                                            className={`text-[11px] tabular-nums ${
+                                                description.length > 0 ? 'font-semibold text-gray-600' : 'text-gray-300'
+                                            }`}
+                                        >
+                                            {description.length.toLocaleString('fa-IR')}
+                                        </span>
+                                    </div>
+                                    <textarea
+                                        id="pin-desc"
+                                        value={description}
+                                        onChange={(e) => setDescription(e.target.value)}
+                                        placeholder="نکته، منبع یا توضیح کوتاهی درباره این پین بنویس..."
+                                        className="w-full flex-1 min-h-[160px] rounded-2xl bg-gray-50/90 px-4 py-3 text-sm text-gray-900 placeholder:text-gray-400
+                                            ring-1 ring-gray-200/80 leading-relaxed resize-none
+                                            focus:bg-white focus:outline-none focus:ring-2 focus:ring-red-500/30
+                                            transition-all"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* ─── ردیف ۲: دسته‌بندی تمام‌عرض داخل همان باکس ─── */}
+                        <div className="border-t border-gray-100 p-5 sm:p-6">
+                            <div className="mb-3.5 flex items-center justify-between">
+                                <span className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-800">
+                                    <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-50 text-red-600">
+                                        <FiTag className="h-3.5 w-3.5" />
+                                    </span>
+                                    انتخاب دسته‌بندی
+                                </span>
+
+                                {selectedCategoryObj && (
+                                    <span
+                                        className="rounded-full px-2.5 py-0.5 text-[11px] font-bold"
+                                        style={{
+                                            backgroundColor: `${selectedCategoryObj.color}16`,
+                                            color: selectedCategoryObj.color,
+                                        }}
+                                    >
+                                        {selectedCategoryObj.name}
+                                    </span>
+                                )}
+                            </div>
+
+                            {loadingCategories ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {Array.from({ length: 10 }).map((_, i) => (
+                                        <div key={i} className="h-10 w-28 rounded-xl bg-gray-100 animate-pulse" />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="flex flex-wrap gap-2">
+                                    {categories.map((cat) => {
+                                        const isActive = category === cat.slug
+                                        const Icon = getCategoryIcon(cat.icon)
+
+                                        return (
+                                            <button
+                                                key={cat.slug}
+                                                type="button"
+                                                onClick={() => setCategory(cat.slug)}
+                                                style={
+                                                    isActive
+                                                        ? {
+                                                              backgroundColor: `${cat.color}12`,
+                                                              boxShadow: `inset 0 0 0 1.5px ${cat.color}`,
+                                                          }
+                                                        : undefined
+                                                }
+                                                className={`group inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-bold
+                                                    transition-all duration-200 cursor-pointer active:scale-[0.97] ${
+                                                        isActive
+                                                            ? 'text-gray-900 shadow-2xs'
+                                                            : 'bg-gray-50/90 text-gray-600 ring-1 ring-gray-200/70 hover:bg-white hover:ring-gray-300 hover:text-gray-900'
+                                                    }`}
+                                            >
+                                                <Icon
+                                                    className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:scale-110"
+                                                    style={{ color: isActive ? cat.color : '#6B7280' }}
+                                                />
+                                                <span>{cat.name}</span>
+                                                {isActive && (
+                                                    <span
+                                                        className="flex h-4 w-4 items-center justify-center rounded-full text-white"
+                                                        style={{ backgroundColor: cat.color }}
+                                                    >
+                                                        <FiCheck className="h-2.5 w-2.5 stroke-[3]" />
+                                                    </span>
+                                                )}
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ─── ردیف ۳: نوار دکمه‌ها چسبیده به کف باکس ─── */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-5 sm:px-6 py-4">
+                            <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
+                                {!hasImage ? (
+                                    <span>ابتدا یک تصویر انتخاب کنید</span>
+                                ) : !hasTitle ? (
+                                    <span>برای انتشار، یک عنوان کوتاه بنویسید</span>
+                                ) : (
+                                    <span className="flex items-center gap-1.5 font-semibold text-emerald-600">
+                                        <FiCheckCircle className="h-4 w-4" />
+                                        همه‌چیز آماده انتشار است
+                                    </span>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2.5">
+                                <Link
+                                    href="/"
+                                    className="shrink-0 rounded-xl bg-white hover:bg-gray-100 px-5 py-2.5 text-xs sm:text-sm font-bold text-gray-700 ring-1 ring-gray-200/90 transition-colors no-underline"
+                                >
+                                    انصراف
+                                </Link>
+
+                                <button
+                                    type="submit"
+                                    disabled={loading || isPreparing || !isFormValid}
+                                    className="flex-1 sm:flex-initial sm:min-w-44 flex items-center justify-center gap-2 rounded-xl
+                                        bg-gradient-to-r from-red-600 to-rose-600 py-2.5 px-6 text-xs sm:text-sm font-bold text-white
+                                        shadow-md shadow-red-500/25 hover:shadow-lg hover:shadow-red-500/30 hover:brightness-105
+                                        active:scale-[0.98] transition-all cursor-pointer
+                                        disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none disabled:hover:brightness-100"
+                                >
+                                    {isPreparing ? (
+                                        <>
+                                            <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                            آماده‌سازی...
+                                        </>
+                                    ) : loading ? (
+                                        <>
+                                            <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                            در حال انتشار...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <FiUpload className="h-4 w-4" />
+                                            انتشار پین
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </form>
@@ -434,7 +708,7 @@ export default function CreatePage() {
                     to   { opacity: 1; transform: translateY(0); }
                 }
                 @media (prefers-reduced-motion: reduce) {
-                    * { animation: none !important; }
+                    * { animation: none !important; transition-duration: 0.01ms !important; }
                 }
             `}</style>
         </main>

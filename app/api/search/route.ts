@@ -16,15 +16,20 @@ export async function GET(request: Request) {
         const pins = await prisma.pin.findMany({
             where: {
                 OR: [
-                    { title: { contains: q } },
-                    { description: { contains: q } },
+                    { title: { contains: q, mode: 'insensitive' } },
+                    { description: { contains: q, mode: 'insensitive' } },
                 ],
             },
             orderBy: { createdAt: 'desc' },
             take: 50,
             include: {
                 saves: {
-                    include: { board: true },
+                    where: user ? { userId: user.id } : { userId: '__NONE__' },
+                    include: {
+                        board: {
+                            select: { id: true, name: true },
+                        },
+                    },
                 },
                 category: {
                     select: { slug: true, name: true, icon: true, color: true },
@@ -33,9 +38,7 @@ export async function GET(request: Request) {
         })
 
         const pinsWithMeta = pins.map((pin) => {
-            const userSaves = user
-                ? pin.saves.filter((s) => s.userId === user.id)
-                : []
+            const userSaves = user ? pin.saves : []
 
             return {
                 id: pin.id,

@@ -1,21 +1,23 @@
 "use client"
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { useInfiniteQuery, useQueryClient, useQuery } from '@tanstack/react-query'
 import PinCard from './components/PinCard'
+import PinGridSkeleton from './components/skeletons/PinGridSkeleton'
 import { FiAlertCircle, FiImage, FiCheckCircle } from 'react-icons/fi'
 import Spinner from './components/Spinner'
 import Link from 'next/link'
 import { FiTag } from 'react-icons/fi'
 import { getCategoryIcon } from '@/lib/categories'
+import { useDragScroll } from '@/lib/useDragScroll'
 
 const LIMIT = 12
 
 export default function Home() {
   const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const categoriesRef = useDragScroll<HTMLDivElement>()
   const queryClient = useQueryClient()
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const [category, setCategory] = useState('other')
 
   const { data: categoriesData } = useQuery<{ categories: { slug: string; name: string; icon: string; color: string }[] }>({
     queryKey: ['categories-all'],
@@ -52,15 +54,15 @@ export default function Home() {
       return lastPage.hasMore ? allPages.length + 1 : undefined
     },
     initialPageParam: 1,
-    staleTime: 0,
+    staleTime: 60 * 1000,
   })
 
   const pins = data?.pages.flatMap((page) => page.pins) ?? []
 
-  const handleCategoryChange = (slug: string | null) => {
+  const handleCategoryChange = useCallback((slug: string | null) => {
     setActiveCategory(slug)
     queryClient.removeQueries({ queryKey: ['pins'] })
-  }
+  }, [queryClient])
 
   // ── IntersectionObserver برای infinite scroll ──
   useEffect(() => {
@@ -84,17 +86,9 @@ export default function Home() {
     return () => observer.disconnect()
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
-  const handlePinUpdate = () => {
+  const handlePinUpdate = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['pins'] })
-  }
-
-  if (isLoading) {
-    return (
-      <main className="min-h-[60vh] flex items-center justify-center">
-        <Spinner size="lg" className='mt-35' />
-      </main>
-    )
-  }
+  }, [queryClient])
 
   if (isError) {
     return (
@@ -108,8 +102,11 @@ export default function Home() {
   }
 
   return (
-    <main className="p-4 md:p-6">
-      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 pt-4 scrollbar-none px-1">
+    <main className="p-4 md:p-6 pb-24 lg:pb-8">
+      <div
+        ref={categoriesRef}
+        className="flex items-center gap-2 overflow-x-auto pb-3 mb-6 pt-4 scrollbar-none px-1 cursor-grab active:cursor-grabbing select-none"
+      >
         <button
           onClick={() => handleCategoryChange(null)}
           className={`shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all
@@ -122,7 +119,7 @@ export default function Home() {
         </button>
 
         {categories.map((cat) => {
-          const isActive = category === cat.slug
+          const isActive = activeCategory === cat.slug
           const Icon = getCategoryIcon(cat.icon)
           return (
             <button
@@ -158,7 +155,9 @@ export default function Home() {
         </Link>
       </div>
 
-      {pins.length === 0 ? (
+      {isLoading ? (
+        <PinGridSkeleton count={15} />
+      ) : pins.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="w-16 h-16 rounded-2xl bg-gray-50 ring-1 ring-black/5 flex items-center justify-center mb-4">
             <FiImage className="w-6 h-6 text-gray-300" />
@@ -168,7 +167,6 @@ export default function Home() {
           </p>
         </div>
       ) : (
-
         <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-4 space-y-4">
           {pins.map((pin, index) => (
             <PinCard

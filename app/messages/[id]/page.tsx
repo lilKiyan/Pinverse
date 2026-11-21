@@ -154,18 +154,21 @@ export default function ChatPage() {
         prevMessagesRef.current = messages
     }, [messages, user])
 
-    // ── اسکرول اولیه ──
+    // ── اسکرول اولیه (کاملاً ایزوله بدون پرش صفحه اصلی) ──
     useEffect(() => {
-        if (!loading && initialScrollNeeded && messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'auto' })
+        if (!loading && initialScrollNeeded && messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
             setInitialScrollNeeded(false)
         }
     }, [loading, messages, initialScrollNeeded])
 
     // ── اسکرول بعد از ارسال ──
     useEffect(() => {
-        if (shouldScrollAfterSend.current && messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+        if (shouldScrollAfterSend.current && messagesContainerRef.current) {
+            messagesContainerRef.current.scrollTo({
+                top: messagesContainerRef.current.scrollHeight,
+                behavior: 'smooth',
+            })
             shouldScrollAfterSend.current = false
         }
     }, [messages])

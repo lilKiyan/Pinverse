@@ -4,8 +4,10 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import PinCard from '../components/PinCard'
+import PinGridSkeleton from '../components/skeletons/PinGridSkeleton'
+import UserProfileSkeleton from '../components/skeletons/UserProfileSkeleton'
 import { useAuthStore } from '@/lib/authStore'
-import { FiAtSign, FiMail, FiUsers, FiImage, FiMapPin, FiGrid, FiPlus, FiUserPlus } from 'react-icons/fi'
+import { FiAtSign, FiMail, FiUsers, FiImage, FiMapPin, FiGrid, FiPlus, FiUserPlus, FiLogIn } from 'react-icons/fi'
 
 export default function ProfilePage() {
     const { user, setUser } = useAuthStore()
@@ -24,7 +26,6 @@ export default function ProfilePage() {
 
     const followingCount = followData?.followingCount ?? 0
 
-    // ── دریافت کاربر فعلی (فقط اگر store خالی باشه) ──
     const { isLoading: loadingUser } = useQuery({
         queryKey: ['me'],
         queryFn: async () => {
@@ -33,11 +34,10 @@ export default function ProfilePage() {
             const data = await res.json()
             return data.user
         },
-        enabled: !user,             // فقط وقتی store خالیه اجرا بشه
-        staleTime: 5 * 60 * 1000,   // ۵ دقیقه داده تازه است
+        enabled: !user,           
+        staleTime: 5 * 60 * 1000,
     })
 
-    // وقتی user از query لود شد، توی store ذخیره‌ش کن
     useEffect(() => {
         const cachedUser = queryClient.getQueryData(['me']) as any
         if (!user && cachedUser) {
@@ -45,7 +45,6 @@ export default function ProfilePage() {
         }
     }, [user, setUser, queryClient])
 
-    // ── پین‌های کاربر ──
     const {
         data: pins = [],
         isLoading: loadingPins,
@@ -60,7 +59,6 @@ export default function ProfilePage() {
         staleTime: 60 * 1000,
     })
 
-    // ── تعداد دنبال‌کننده‌ها ──
     const { data: followersCount = 0 } = useQuery({
         queryKey: ['followers-count', user?.id],
         queryFn: async () => {
@@ -73,7 +71,6 @@ export default function ProfilePage() {
         staleTime: 60 * 1000,
     })
 
-    // حذف پین → invalidate query
     const handlePinDeleted = (pinId: string) => {
         queryClient.setQueryData(['my-pins'], (old: any[] | undefined) =>
             (old || []).filter((p) => p.id !== pinId)
@@ -82,27 +79,34 @@ export default function ProfilePage() {
     }
 
     if (loadingUser) {
-        return (
-            <main className="min-h-[60vh] flex justify-center items-center">
-                <div className="w-9 h-9 border-[3px] border-gray-200 border-t-red-500 rounded-full animate-spin" />
-            </main>
-        )
+        return <UserProfileSkeleton />
     }
 
     if (!user) {
         return (
-            <main className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
-                <div className="w-16 h-16 rounded-2xl bg-gray-50 ring-1 ring-black/5 flex items-center justify-center mb-4">
-                    <FiAtSign className="w-6 h-6 text-gray-300" />
+            <main className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 pb-20">
+                <div className="max-w-sm w-full bg-white rounded-3xl p-8 shadow-xl shadow-red-100/30 ring-1 ring-black/5 flex flex-col items-center text-center space-y-4 animate-[fadeIn_0.3s_ease-out]">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-red-200">
+                        <FiAtSign className="w-7 h-7" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <h2 className="text-xl font-bold text-gray-900">حساب کاربری</h2>
+                        <p className="text-gray-500 text-sm">برای مشاهده پین‌ها و پروفایل خود وارد شوید.</p>
+                    </div>
+                    <Link
+                        href="/login"
+                        className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold py-3 px-6 rounded-xl shadow-md shadow-red-200 hover:shadow-lg active:scale-95 transition-all no-underline"
+                    >
+                        <FiLogIn className="w-4 h-4" />
+                        ورود به حساب کاربری
+                    </Link>
                 </div>
-                <p className="text-gray-500 text-sm">برای مشاهده پروفایل وارد شوید.</p>
             </main>
         )
     }
 
     return (
         <main className="mb-18">
-            {/* هیرو */}
             <div className="relative overflow-hidden bg-[#150a08] px-4 sm:px-8 pt-14 pb-20 sm:pb-24">
                 <div className="absolute -top-24 -right-16 w-72 h-72 bg-red-600/40 rounded-full blur-[100px] animate-pulse" />
                 <div className="absolute -bottom-24 -left-16 w-80 h-80 bg-orange-500/30 rounded-full blur-[100px] animate-pulse" />
@@ -142,9 +146,7 @@ export default function ProfilePage() {
                             {user.email}<FiMail className="w-3 h-3" />
                         </span>
                     </div>
-                    {/* آمار */}
                     <div className="mt-6 flex items-center gap-5 sm:gap-7">
-                        {/* پین‌ها — بدون لینک */}
                         <div className="group/stat flex flex-col items-center gap-1.5 cursor-default">
                             <div className="flex items-center gap-1.5">
                                 <FiGrid className="w-5 h-5 text-red-400/60 transition-all duration-300 group-hover/stat:text-red-400 group-hover/stat:scale-110" />
@@ -158,7 +160,6 @@ export default function ProfilePage() {
 
                         <span className="w-1 h-1 rounded-full bg-white/20" />
 
-                        {/* ✨ دنبال‌کننده‌های خودت — لینک به connections */}
                         <Link
                             href={`/user/${user.id}/connections?tab=followers`}
                             className="group/stat flex flex-col items-center gap-1.5 no-underline"
@@ -175,7 +176,6 @@ export default function ProfilePage() {
 
                         <span className="w-1 h-1 rounded-full bg-white/20" />
 
-                        {/* ✨ دنبال‌شده‌های خودت — لینک به connections */}
                         <Link
                             href={`/user/${user.id}/connections?tab=following`}
                             className="group/stat flex flex-col items-center gap-1.5 no-underline"
@@ -193,7 +193,6 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            {/* پین‌های کاربر */}
             <div className="max-w-[1400px] mx-auto px-4 sm:px-8 -mt-8 relative z-10">
                 <div className="bg-white rounded-3xl overflow-hidden shadow-[0_10px_40px_-15px_rgba(0,0,0,0.15)] ring-1 ring-black/5 transition-all duration-300 hover:shadow-[0_20px_50px_-12px_rgba(0,0,0,0.2)] hover:ring-black/10">
                     <div className="h-1.5 bg-gradient-to-r from-red-700 to-orange-600" />
@@ -207,9 +206,7 @@ export default function ProfilePage() {
                         </div>
 
                         {loadingPins ? (
-                            <div className="flex justify-center py-20">
-                                <div className="w-9 h-9 border-[3px] border-gray-200 border-t-red-500 rounded-full animate-spin" />
-                            </div>
+                            <PinGridSkeleton count={8} />
                         ) : pins.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-20 text-center">
                                 <div className="w-16 h-16 rounded-2xl bg-gray-50 ring-1 ring-black/5 flex items-center justify-center mb-4">

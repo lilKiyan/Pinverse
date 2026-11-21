@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
     return {
         name: 'Pinverse — پلتفرم اشتراک‌گذاری تصویر',
         short_name: 'Pinverse',
-        description: 'کلون کامل Pinterest — پین، برد، چت و اعلان زنده',
+        description: 'پلتفرم اشتراک‌گذاری تصویر Pinverse — پین، برد، چت و اعلان زنده',
         start_url: '/',
         display: 'standalone',
         background_color: '#ffffff',

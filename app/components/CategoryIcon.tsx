@@ -1,5 +1,6 @@
 "use client"
 
+import React from 'react'
 import { getCategoryIcon } from '@/lib/categories'
 
 type CategoryIconProps = {
@@ -9,5 +10,5 @@ type CategoryIconProps = {
 
 export default function CategoryIcon({ iconName, className = 'w-4 h-4' }: CategoryIconProps) {
     const Icon = getCategoryIcon(iconName)
-    return <Icon className={className} />
+    return React.createElement(Icon, { className })
 }
