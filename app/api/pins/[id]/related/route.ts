@@ -112,7 +112,7 @@ export async function GET(
                 createdAt: pin.createdAt,
                 updatedAt: pin.updatedAt,
                 userId: pin.userId,
-                isOwner: user ? pin.userId === user.id : false,
+                isOwner: false,
                 isSavedByMe: userSaves.length > 0,
                 isReportedByMe: user
                     ? pin.reports.some((r) => r.reporterId === user.id)
