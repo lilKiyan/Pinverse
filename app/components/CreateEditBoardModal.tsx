@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { FiX, FiLock } from 'react-icons/fi'
 
 type Board = {
@@ -10,44 +11,55 @@ type Board = {
 }
 
 type Props = {
-    editingBoard: Board | null   // null یعنی ساخت جدید
+    editingBoard?: Board | null  
+    initialName?: string
     onClose: () => void
-    onSave: () => void            // بعد از موفقیت، والد رو خبر کن
+    onSave: (savedBoard?: any) => void          
 }
 
-export default function CreateEditBoardModal({ editingBoard, onClose, onSave }: Props) {
-    const [boardName, setBoardName] = useState(editingBoard?.name || '')
+export default function CreateEditBoardModal({ editingBoard, initialName = '', onClose, onSave }: Props) {
+    const [mounted, setMounted] = useState(false)
+    const [boardName, setBoardName] = useState(editingBoard?.name || initialName)
     const [boardIsPrivate, setBoardIsPrivate] = useState(editingBoard?.isPrivate || false)
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
 
+    useEffect(() => {
+        setMounted(true)
+        const prevOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prevOverflow
+        }
+    }, [])
+
     const handleSave = async () => {
-        if (!boardName.trim()) return
+        if (!boardName.trim() || saving) return
         setSaving(true)
         setError('')
 
         try {
-            const url = editingBoard
+            const url = editingBoard?.id
                 ? `/api/boards/${editingBoard.id}`
                 : '/api/boards'
-            const method = editingBoard ? 'PATCH' : 'POST'
+            const method = editingBoard?.id ? 'PATCH' : 'POST'
 
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    name: boardName,
+                    name: boardName.trim(),
                     isPrivate: boardIsPrivate,
                 }),
             })
 
+            const data = await res.json()
             if (!res.ok) {
-                const data = await res.json()
                 throw new Error(data.error || 'خطا در ذخیره برد')
             }
 
-            onSave()       // والد رو خبر کن که برد ذخیره شد
-            onClose()      // مودال رو ببند
+            onSave(data)     
+            onClose()       
         } catch (err) {
             setError(err instanceof Error ? err.message : 'خطا')
         } finally {
@@ -55,9 +67,20 @@ export default function CreateEditBoardModal({ editingBoard, onClose, onSave }: 
         }
     }
 
-    return (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md">
+    if (!mounted) return null
+
+    const modalContent = (
+        <div
+            className="fixed inset-0 z-[99999] w-screen h-screen min-h-dvh bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose()
+            }}
+        >
+            <div
+                dir="rtl"
+                className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md animate-[scaleUp_0.2s_ease-out] my-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-lg font-bold text-gray-900">
                         {editingBoard ? 'ویرایش برد' : 'ساخت برد جدید'}
@@ -92,7 +115,7 @@ export default function CreateEditBoardModal({ editingBoard, onClose, onSave }: 
                         type="checkbox"
                         checked={boardIsPrivate}
                         onChange={(e) => setBoardIsPrivate(e.target.checked)}
-                        className="w-4 h-4 accent-red-600"
+                        className="w-4 h-4 accent-red-600 cursor-pointer"
                     />
                     <FiLock className="w-3.5 h-3.5 text-gray-400" />
                     <span className="text-sm text-gray-700 font-medium">برد خصوصی</span>
@@ -100,20 +123,31 @@ export default function CreateEditBoardModal({ editingBoard, onClose, onSave }: 
 
                 <div className="flex gap-2.5">
                     <button
+                        type="button"
                         onClick={onClose}
                         className="flex-1 h-11 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition-colors cursor-pointer"
                     >
                         انصراف
                     </button>
                     <button
+                        type="button"
                         onClick={handleSave}
                         disabled={saving || !boardName.trim()}
-                        className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        className="flex-1 h-11 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-red-200"
                     >
-                        {saving ? 'در حال ذخیره...' : 'ذخیره'}
+                        {saving ? (
+                            <>
+                                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                                <span>در حال ذخیره...</span>
+                            </>
+                        ) : (
+                            <span>ذخیره</span>
+                        )}
                     </button>
                 </div>
             </div>
         </div>
     )
+
+    return createPortal(modalContent, document.body)
 }

@@ -23,6 +23,7 @@ import {
 import { compressImage } from '@/lib/imageCompress'
 import { getCategoryIcon } from '@/lib/categories'
 import { useAuthStore } from '@/lib/authStore'
+import AuthGate from '../components/AuthGate'
 
 type CreatePinInput = {
     title: string
@@ -73,7 +74,6 @@ export default function CreatePage() {
     const currentUser = user || meData
     const categories = categoriesData?.categories ?? []
 
-    // ── State های فرم و UI ──
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
@@ -231,40 +231,12 @@ export default function CreatePage() {
 
     if (!currentUser) {
         return (
-            <main
-                dir="rtl"
-                className="relative min-h-[82vh] flex flex-col items-center justify-center px-4 overflow-hidden bg-[#FAFAFB] pb-24 lg:pb-8"
-            >
-                <div className="pointer-events-none absolute -top-24 right-1/3 h-80 w-80 rounded-full bg-rose-200/35 blur-3xl" />
-                <div className="relative z-10 w-full max-w-md rounded-3xl bg-white/95 backdrop-blur-xl p-8 text-center shadow-xl shadow-gray-200/60 ring-1 ring-gray-200/70 space-y-5 animate-[fadeInUp_0.35s_ease-out]">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/25">
-                        <FiUpload className="h-6 w-6" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <h2 className="text-lg font-extrabold text-gray-900">
-                            برای ساخت پین وارد شوید
-                        </h2>
-                        <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">
-                            برای اشتراک‌گذاری ایده‌ها و تصاویر خود در Pinverse، ابتدا وارد حساب کاربری شوید.
-                        </p>
-                    </div>
-                    <div className="pt-2 flex flex-col gap-2.5">
-                        <Link
-                            href="/login"
-                            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 py-3 text-sm font-bold text-white shadow-md shadow-red-500/20 hover:brightness-105 active:scale-[0.98] transition-all no-underline"
-                        >
-                            <FiLogIn className="h-4 w-4" />
-                            ورود به حساب کاربری
-                        </Link>
-                        <Link
-                            href="/"
-                            className="w-full py-2 text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors no-underline"
-                        >
-                            بازگشت به صفحه اصلی
-                        </Link>
-                    </div>
-                </div>
-            </main>
+            <AuthGate
+                icon={FiUpload}
+                title="ساخت پین جدید"
+                description="برای اشتراک‌گذاری ایده‌ها و تصاویر خود در Pinverse، ابتدا وارد حساب کاربری شوید."
+                redirectUrl="/create"
+            />
         )
     }
 
@@ -273,7 +245,6 @@ export default function CreatePage() {
             dir="rtl"
             className="relative min-h-screen overflow-hidden bg-[#FAFAFB] px-4 sm:px-6 py-6 sm:py-8 pb-24 lg:pb-12"
         >
-            {/* هاله‌های لطیف پس‌زمینه */}
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute -top-28 right-1/4 h-80 w-80 rounded-full bg-rose-200/30 blur-3xl"
@@ -284,7 +255,6 @@ export default function CreatePage() {
             />
 
             <div className="relative mx-auto max-w-5xl">
-                {/* ═══ هدر استاندارد و جمع‌وجور ═══ */}
                 <header className="mb-6 flex items-center justify-between gap-4 animate-[fadeInUp_0.35s_ease-out_both]">
                     <div className="flex items-center gap-3">
                         <Link
@@ -322,7 +292,6 @@ export default function CreatePage() {
                 </header>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* ── باکس خطا ── */}
                     {activeError && (
                         <div className="flex items-center justify-between gap-3 rounded-2xl bg-red-50/90 px-4 py-3.5 text-red-700 ring-1 ring-red-200/80 animate-[fadeInUp_0.25s_ease-out]">
                             <div className="flex items-center gap-2.5">
@@ -341,14 +310,10 @@ export default function CreatePage() {
                         </div>
                     )}
 
-                    {/* ═══ باکس واحد و هم‌تراز کل فرم ═══ */}
                     <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-gray-200/80 shadow-sm">
-                        {/* نوار رنگی ظریف بالا */}
                         <div className="h-1 bg-gradient-to-l from-red-500 via-rose-500 to-orange-400" />
 
-                        {/* ─── ردیف ۱: دو ستون دقیقاً هم‌ارتفاع ─── */}
                         <div className="grid grid-cols-1 lg:grid-cols-12">
-                            {/* ستون راست: آپلود و پیش‌نمایش تصویر */}
                             <div className="lg:col-span-5 flex flex-col p-5 sm:p-6 border-b lg:border-b-0 lg:border-l border-gray-100">
                                 <div className="mb-3 flex items-center justify-between">
                                     <span className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-800">
@@ -505,9 +470,7 @@ export default function CreatePage() {
                                 )}
                             </div>
 
-                            {/* ستون چپ: عنوان و توضیحات (هم‌ارتفاع با ستون تصویر) */}
                             <div className="lg:col-span-7 flex flex-col gap-5 p-5 sm:p-6">
-                                {/* عنوان */}
                                 <div>
                                     <div className="mb-2 flex items-center justify-between">
                                         <label
@@ -537,7 +500,6 @@ export default function CreatePage() {
                                     />
                                 </div>
 
-                                {/* توضیحات — کشیده می‌شود تا هم‌تراز کف باکس تصویر باشد */}
                                 <div className="flex flex-1 flex-col">
                                     <div className="mb-2 flex items-center justify-between">
                                         <label
@@ -572,7 +534,6 @@ export default function CreatePage() {
                             </div>
                         </div>
 
-                        {/* ─── ردیف ۲: دسته‌بندی تمام‌عرض داخل همان باکس ─── */}
                         <div className="border-t border-gray-100 p-5 sm:p-6">
                             <div className="mb-3.5 flex items-center justify-between">
                                 <span className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-800">
@@ -647,7 +608,6 @@ export default function CreatePage() {
                             )}
                         </div>
 
-                        {/* ─── ردیف ۳: نوار دکمه‌ها چسبیده به کف باکس ─── */}
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-5 sm:px-6 py-4">
                             <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
                                 {!hasImage ? (

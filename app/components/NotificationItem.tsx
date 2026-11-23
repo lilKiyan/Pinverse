@@ -13,7 +13,6 @@ import {
     FiSend,
 } from 'react-icons/fi'
 
-// ✅ جدول استایل‌ها — حالا ۵ نوع (message اضافه شد!)
 const NOTIFICATION_STYLES = {
     like: { icon: FiHeart, color: 'text-red-500', bg: 'bg-red-50' },
     comment: { icon: FiMessageCircle, color: 'text-blue-500', bg: 'bg-blue-50' },
@@ -22,7 +21,6 @@ const NOTIFICATION_STYLES = {
     message: { icon: FiSend, color: 'text-emerald-500', bg: 'bg-emerald-50' },
 } as const
 
-// ✅ تایپ از روی خود داده — هر نوع جدید که به جدول اضافه شه، خودکار میاد
 export type NotificationType = keyof typeof NOTIFICATION_STYLES
 
 export type NotificationDTO = {
@@ -62,8 +60,7 @@ export default function NotificationItem({
         setConfirmingDelete(null)
     }
 
-    // ✅ استایل با محافظ — اگه روزی نوعی از دیتابیس اومد که در جدول نیست،
-    // به‌جای کرش، استایل پیش‌فرض (like) استفاده می‌شود
+
     const style = NOTIFICATION_STYLES[notification.type as NotificationType]
         ?? NOTIFICATION_STYLES.like
     const Icon = style.icon
@@ -76,7 +73,6 @@ export default function NotificationItem({
                     : 'bg-white ring-1 ring-gray-100'
                 }`}
         >
-            {/* آواتار */}
             <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold shrink-0">
                 {notification.actor.avatar ? (
                     <Image src={notification.actor.avatar} alt={notification.actor.name} width={40} height={40} className="w-full h-full object-cover" />
@@ -85,7 +81,6 @@ export default function NotificationItem({
                 )}
             </div>
 
-            {/* متن */}
             <div className="flex-1 min-w-0">
                 <p className="text-sm text-gray-800">
                     <span className="font-bold">{notification.actor.name}</span>{' '}
@@ -94,12 +89,10 @@ export default function NotificationItem({
                 <span className="text-[11px] text-gray-400">{timeAgo(notification.createdAt)}</span>
             </div>
 
-            {/* آیکون نوع اعلان */}
             <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${style.bg}`}>
                 <Icon className={`w-4 h-4 ${style.color}`} />
             </div>
 
-            {/* اکشن‌ها */}
             {!notification.isRead && (
                 <button
                     onClick={() => onMarkAsRead(notification.id)}
@@ -117,23 +110,22 @@ export default function NotificationItem({
                 <FiTrash2 className="w-3.5 h-3.5" />
             </button>
 
-            {/* مودال تأیید حذف */}
             {confirmingDelete === notification.id && (
                 <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/50">
                     <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-xs text-center">
                         <p className="text-sm text-gray-600 mb-5">این اعلان حذف شود؟</p>
                         <div className="flex gap-2.5">
                             <button
-                                onClick={() => setConfirmingDelete(null)}
-                                className="flex-1 h-11 bg-gray-100 rounded-xl font-semibold text-sm cursor-pointer"
-                            >
-                                انصراف
-                            </button>
-                            <button
                                 onClick={handleConfirmDelete}
                                 className="flex-1 h-11 bg-red-600 text-white rounded-xl font-semibold text-sm cursor-pointer"
                             >
                                 حذف
+                            </button>
+                            <button
+                                onClick={() => setConfirmingDelete(null)}
+                                className="flex-1 h-11 bg-gray-100 rounded-xl font-semibold text-sm cursor-pointer"
+                            >
+                                انصراف
                             </button>
                         </div>
                     </div>

@@ -27,7 +27,6 @@ export default function BoardPage() {
 
     const pins = board?.pins ?? []
 
-    // حذف پین از cache محلی
     const removePinFromCache = (pinId: string) => {
         queryClient.setQueryData(['board', id], (old: any) => {
             if (!old) return old
@@ -38,14 +37,12 @@ export default function BoardPage() {
         })
     }
 
-    // حذف پین (مالک پین)
     const handleDeletePin = (pinId: string) => {
         removePinFromCache(pinId)
         queryClient.invalidateQueries({ queryKey: ['pins'] })
         queryClient.invalidateQueries({ queryKey: ['my-pins'] })
     }
 
-    // حذف ذخیره از این برد
     const handleRemovePinFromBoard = (pinId: string) => {
         removePinFromCache(pinId)
         queryClient.invalidateQueries({ queryKey: ['saved-pins'] })

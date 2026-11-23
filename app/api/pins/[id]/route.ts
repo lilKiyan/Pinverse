@@ -41,15 +41,48 @@ export async function PATCH(
         }
 
         const body = await request.json()
+        const dataToUpdate: Record<string, unknown> = {}
+
+        if (body.title !== undefined) {
+            dataToUpdate.title = typeof body.title === 'string' ? body.title.trim() : pin.title
+        }
+        if (body.description !== undefined) {
+            dataToUpdate.description = typeof body.description === 'string' ? body.description.trim() || null : null
+        }
+        if (body.category !== undefined) {
+            if (!body.category) {
+                dataToUpdate.categoryId = null
+            } else {
+                const cat = await prisma.category.findFirst({
+                    where: {
+                        OR: [
+                            { slug: String(body.category).trim() },
+                            { id: String(body.category).trim() },
+                        ],
+                        isActive: true,
+                    },
+                    select: { id: true },
+                })
+                if (cat) {
+                    dataToUpdate.categoryId = cat.id
+                }
+            }
+        }
+
         const updatedPin = await prisma.pin.update({
             where: { id },
-            data: {
-                title: body.title ?? pin.title,
-                description: body.description ?? pin.description,
+            data: dataToUpdate,
+            include: {
+                category: {
+                    select: { slug: true, name: true, icon: true, color: true },
+                },
             },
         })
 
-        return NextResponse.json(updatedPin)
+        return NextResponse.json({
+            pin: updatedPin,
+            message: 'پین با موفقیت به‌روزرسانی شد',
+        })
     } catch (error) {
         console.error('PATCH /api/pins/[id] error:', error)
         return NextResponse.json(

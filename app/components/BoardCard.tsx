@@ -54,7 +54,6 @@ export default function BoardCard({
                         </div>
                     )}
 
-                    {/* گرادیانت پایین کاور برای عمق بصری */}
                     <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                 </div>
 

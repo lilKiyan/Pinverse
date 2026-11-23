@@ -441,7 +441,6 @@ export default function CategoriesPage() {
                                                     </span>
                                                 </div>
 
-                                                {/* نوار مینیاتوری محبوبیت */}
                                                 <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100">
                                                     <div
                                                         className="h-full rounded-full transition-all duration-500"

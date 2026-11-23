@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
     FiUserPlus, FiUser, FiAtSign, FiMail, FiLock,
     FiEye, FiEyeOff, FiAlertCircle, FiArrowLeft, FiLoader,
@@ -20,7 +20,7 @@ type FieldErrors = {
     password?: string
 }
 
-export default function RegisterPage() {
+function RegisterForm() {
     const [name, setName] = useState('')
     const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
@@ -31,11 +31,16 @@ export default function RegisterPage() {
     const [loading, setLoading] = useState(false)
 
     const router = useRouter()
+    const searchParams = useSearchParams()
     const setUser = useAuthStore((state) => state.setUser)
+
+    const redirectParam = searchParams.get('redirect')
+    const targetUrl = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')
+        ? redirectParam
+        : '/'
 
     const strength = getPasswordStrength(password)
 
-    // اعتبارسنجی تکی هر فیلد (موقع blur)
     const validateField = (field: keyof FieldErrors, value: string) => {
         let error: string | null = null
         if (field === 'name') error = validateName(value)
@@ -51,7 +56,6 @@ export default function RegisterPage() {
         e.preventDefault()
         setServerError('')
 
-        // چک همه فیلدها
         const nameOk = validateField('name', name)
         const usernameOk = validateField('username', username)
         const emailOk = validateField('email', email)
@@ -78,7 +82,7 @@ export default function RegisterPage() {
             }
 
             if (data.user) setUser(data.user)
-            router.push('/')
+            router.push(targetUrl)
             router.refresh()
         } catch (err) {
             setServerError('خطای شبکه. لطفاً دوباره تلاش کنید')
@@ -92,7 +96,6 @@ export default function RegisterPage() {
             dir="rtl"
             className="relative h-full w-full flex items-center justify-center p-3 sm:p-4 md:p-5 lg:p-6 overflow-hidden bg-[#fff9f8] selection:bg-rose-500 selection:text-white"
         >
-            {/* لایه پس‌زمینه ثابت برای جلوگیری از اسکرول افقی و حفظ اسکرول روان عمودی */}
             <div
                 aria-hidden="true"
                 className="fixed inset-0 overflow-hidden pointer-events-none"
@@ -109,11 +112,9 @@ export default function RegisterPage() {
                 <div className="absolute -bottom-24 left-[-10%] sm:left-[8%] w-72 h-72 sm:w-[26rem] sm:h-[26rem] lg:w-[32rem] lg:h-[32rem] bg-orange-200/45 rounded-full blur-[90px] sm:blur-[120px]" />
             </div>
 
-            {/* قاب بیرونی شیشه‌ای دو‌لایه (Double-Bezel) */}
             <div className="relative z-10 w-full max-w-[420px] sm:max-w-[480px] md:max-w-[760px] lg:max-w-[880px] p-1.5 sm:p-2 rounded-[24px] sm:rounded-[30px] bg-white/65 backdrop-blur-2xl shadow-[0_20px_60px_-18px_rgba(190,18,60,0.2)] lg:shadow-[0_28px_80px_-22px_rgba(190,18,60,0.22)] ring-1 ring-rose-950/[0.06]">
                 <div className="grid grid-cols-1 md:grid-cols-12 bg-white rounded-[20px] sm:rounded-[24px] overflow-hidden ring-1 ring-slate-100">
 
-                    {/* پنل هنری و هدر برند */}
                     <div className="relative md:col-span-5 flex flex-col justify-between p-4 sm:p-5 md:p-6 lg:p-7 text-white overflow-hidden bg-gradient-to-br from-rose-500 via-red-600 to-rose-950">
                         <div className="absolute -top-16 -left-16 w-48 h-48 sm:w-64 sm:h-64 bg-orange-400/35 rounded-full blur-3xl pointer-events-none" />
                         <div className="absolute -bottom-20 -right-14 w-56 h-56 sm:w-72 sm:h-72 bg-rose-400/25 rounded-full blur-3xl pointer-events-none" />
@@ -128,14 +129,12 @@ export default function RegisterPage() {
                             P
                         </span>
 
-                        {/* لوگو و بج وضعیت */}
                         <div className="relative z-10 flex items-center justify-between md:flex-col md:items-start gap-3 sm:gap-4">
                             <div className="flex items-center gap-3.5 md:block">
                                 <div className="w-11 h-11 sm:w-12 sm:h-12 md:w-14 md:h-14 shrink-0 rounded-xl sm:rounded-2xl bg-white/15 backdrop-blur-xl border border-white/30 shadow-[inset_0_1px_1px_rgba(255,255,255,0.5),0_10px_20px_-6px_rgba(0,0,0,0.25)] flex items-center justify-center text-white text-2xl sm:text-3xl font-black">
                                     <span className='mt-1.5'>P</span>
                                 </div>
 
-                                {/* هدر فشرده در موبایل */}
                                 <div className="md:hidden">
                                     <h1 className="text-lg sm:text-xl font-black tracking-tight leading-snug">
                                         ایجاد حساب کاربری
@@ -152,7 +151,6 @@ export default function RegisterPage() {
                             </span>
                         </div>
 
-                        {/* بخش متن هدر در تبلت و دسکتاپ */}
                         <div className="relative z-10 hidden md:block mt-6 lg:mt-8">
                             <h1 className="text-xl lg:text-2xl font-black tracking-tight leading-tight">
                                 ایجاد حساب کاربری
@@ -169,7 +167,6 @@ export default function RegisterPage() {
                         </div>
                     </div>
 
-                    {/* پنل فرم ثبت‌نام */}
                     <div className="md:col-span-7 p-4 sm:p-5 md:p-6 lg:p-7 flex flex-col justify-center bg-white">
                         <div className="mb-3 sm:mb-3.5">
                             <p className="text-[10px] sm:text-xs font-bold tracking-wide text-rose-500 mb-0.5">
@@ -191,7 +188,6 @@ export default function RegisterPage() {
                                 </div>
                             )}
 
-                            {/* چیدمان دو‌ستونه هوشمند برای نام و نام کاربری در نمایشگرهای sm به بالا */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 items-start">
                                 <InputField
                                     id="name"
@@ -220,7 +216,6 @@ export default function RegisterPage() {
                                 />
                             </div>
 
-                            {/* ایمیل */}
                             <InputField
                                 id="email"
                                 label="ایمیل"
@@ -236,7 +231,6 @@ export default function RegisterPage() {
                                 autoComplete="email"
                             />
 
-                            {/* رمز عبور */}
                             <div className="space-y-1">
                                 <label
                                     htmlFor="password"
@@ -280,7 +274,6 @@ export default function RegisterPage() {
                                     </button>
                                 </div>
 
-                                {/* Strength Meter */}
                                 {password && (
                                     <div className="mt-1.5 p-2 sm:p-2.5 rounded-xl bg-slate-50/90 border border-slate-100 space-y-1.5">
                                         <div className="flex items-center gap-2">
@@ -312,7 +305,6 @@ export default function RegisterPage() {
                                 )}
                             </div>
 
-                            {/* دکمه ثبت‌نام */}
                             <button
                                 type="submit"
                                 disabled={loading}
@@ -333,11 +325,10 @@ export default function RegisterPage() {
                             </button>
                         </form>
 
-                        {/* فوتر ورود */}
                         <div className="mt-3.5 sm:mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs">
                             <span className="text-slate-500">حساب دارید؟</span>
                             <Link
-                                href="/login"
+                                href={targetUrl !== '/' ? `/login?redirect=${encodeURIComponent(targetUrl)}` : '/login'}
                                 className="group inline-flex items-center gap-1.5 text-rose-600 font-bold hover:text-rose-700 transition-colors py-0.5"
                             >
                                 <span>وارد شوید</span>
@@ -349,6 +340,20 @@ export default function RegisterPage() {
                 </div>
             </div>
         </main>
+    )
+}
+
+export default function RegisterPage() {
+    return (
+        <Suspense
+            fallback={
+                <main dir="rtl" className="min-h-screen flex items-center justify-center bg-[#fff9f8]">
+                    <FiLoader className="w-8 h-8 text-rose-500 animate-spin" />
+                </main>
+            }
+        >
+            <RegisterForm />
+        </Suspense>
     )
 }
 

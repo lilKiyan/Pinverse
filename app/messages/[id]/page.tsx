@@ -8,6 +8,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { IoSend } from 'react-icons/io5'
 import { FiArrowRight, FiMessageCircle, FiChevronDown, FiAlertCircle } from 'react-icons/fi'
 import { CONTENT_LIMITS } from '@/lib/validations'
+import ChatConversationSkeleton from '@/app/components/skeletons/ChatConversationSkeleton'
+import AuthGate from '@/app/components/AuthGate'
 import Spinner from '@/app/components/Spinner'
 import type { SharedPinInfo } from '../../types/pin'
 import SharedPinCard from '@/app/components/SharedPinCard'
@@ -39,8 +41,22 @@ type OtherUser = {
 export default function ChatPage() {
     const { id } = useParams<{ id: string }>()
     const router = useRouter()
-    const { user } = useAuthStore()
+    const user = useAuthStore((state) => state.user)
     const queryClient = useQueryClient()
+
+    const { data: meData, isLoading: checkingAuth } = useQuery({
+        queryKey: ['me'],
+        queryFn: async () => {
+            const res = await fetch('/api/auth/me')
+            if (!res.ok) return null
+            const data = await res.json()
+            return data.user
+        },
+        enabled: !user,
+        staleTime: 60 * 1000,
+    })
+
+    const currentUser = user || meData
 
     const [newMessage, setNewMessage] = useState('')
     const [showScrollButton, setShowScrollButton] = useState(false)
@@ -59,7 +75,6 @@ export default function ChatPage() {
     const isNearLimit = messageLength > CONTENT_LIMITS.MESSAGE * 0.8
     const overBy = messageLength - CONTENT_LIMITS.MESSAGE
 
-    // ── Query ۱: پیام‌ها ──
     const {
         data: messages = [],
         isLoading: loading,
@@ -73,12 +88,11 @@ export default function ChatPage() {
             const data = await res.json()
             return data.messages || []
         },
-        enabled: !!id && !!user,
+        enabled: !!id && !!currentUser,
         refetchInterval: 3000,
         staleTime: 1000,
     })
 
-    // ── Query ۲: اطلاعات کاربر مقابل ──
     const { data: conversationInfo } = useQuery({
         queryKey: ['conversation', id],
         queryFn: async () => {
@@ -92,7 +106,6 @@ export default function ChatPage() {
 
     const otherUser: OtherUser | null = conversationInfo?.otherUser || null
 
-    // ── Mutation: ارسال پیام ──
     const sendMessage = useMutation({
         mutationFn: async (content: string) => {
             const res = await fetch(`/api/conversations/${id}/messages`, {
@@ -110,7 +123,6 @@ export default function ChatPage() {
         },
     })
 
-    // ── firstUnreadId فقط بار اول ──
     useEffect(() => {
         if (hasSetFirstUnread.current) return
         if (messages.length === 0 || !user) return
@@ -121,14 +133,12 @@ export default function ChatPage() {
         hasSetFirstUnread.current = true
     }, [messages, user])
 
-    // ── علامت‌گذاری خوانده‌شده ──
     useEffect(() => {
-        if (id && user && firstUnreadId !== null) {
+        if (id && currentUser && firstUnreadId !== null) {
             fetch(`/api/conversations/${id}/read`, { method: 'POST' })
         }
-    }, [id, user, firstUnreadId])
+    }, [id, currentUser, firstUnreadId])
 
-    // ── رهگیری پیام‌های جدید ──
     useEffect(() => {
         if (messages.length === 0) return
         if (prevMessagesRef.current.length === 0) {
@@ -137,7 +147,7 @@ export default function ChatPage() {
         }
         const newFromOthers = messages.filter(
             (msg) =>
-                msg.senderId !== user?.id &&
+                msg.senderId !== currentUser?.id &&
                 !prevMessagesRef.current.some((prev) => prev.id === msg.id)
         )
         if (newFromOthers.length > 0) {
@@ -154,7 +164,6 @@ export default function ChatPage() {
         prevMessagesRef.current = messages
     }, [messages, user])
 
-    // ── اسکرول اولیه (کاملاً ایزوله بدون پرش صفحه اصلی) ──
     useEffect(() => {
         if (!loading && initialScrollNeeded && messagesContainerRef.current) {
             messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight
@@ -162,7 +171,6 @@ export default function ChatPage() {
         }
     }, [loading, messages, initialScrollNeeded])
 
-    // ── اسکرول بعد از ارسال ──
     useEffect(() => {
         if (shouldScrollAfterSend.current && messagesContainerRef.current) {
             messagesContainerRef.current.scrollTo({
@@ -196,17 +204,22 @@ export default function ChatPage() {
         sendMessage.mutate(newMessage)
     }
 
-    if (!user) {
+    if (checkingAuth && !currentUser) {
         return (
-            <main dir="rtl" className="h-full flex flex-col items-center justify-center gap-5 overflow-hidden bg-gradient-to-b from-gray-50 via-white to-red-50/30">
-                <div className="w-20 h-20 rounded-3xl bg-white shadow-lg ring-1 ring-black/5 flex items-center justify-center rotate-3">
-                    <FiMessageCircle className="w-9 h-9 text-red-300" />
-                </div>
-                <p className="text-gray-700 font-bold text-lg">برای مشاهده پیام‌ها وارد شوید</p>
-                <Link href="/login" className="bg-red-600 text-white px-7 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-red-200 hover:bg-red-700 transition-all no-underline">
-                    ورود به حساب
-                </Link>
+            <main className="min-h-[70vh] flex items-center justify-center">
+                <Spinner size="lg" />
             </main>
+        )
+    }
+
+    if (!currentUser) {
+        return (
+            <AuthGate
+                icon={FiMessageCircle}
+                title="صفحه گفتگوی خصوصی"
+                description="برای مشاهده پیام‌ها و ارسال پاسخ در این گفتگو وارد شوید."
+                redirectUrl={`/messages/${id}`}
+            />
         )
     }
 
@@ -270,9 +283,7 @@ export default function ChatPage() {
             <div ref={messagesContainerRef} onScroll={handleScroll} className="flex-1 min-h-0 overflow-y-auto px-3 sm:px-4 py-6 relative">
                 <div className="max-w-2xl mx-auto space-y-3">
                     {loading ? (
-                        <div className="flex justify-center py-20">
-                            <Spinner size="md" className='mt-25' />
-                        </div>
+                        <ChatConversationSkeleton />
                     ) : isError ? (
                         <div className="flex flex-col items-center py-16 text-center">
                             <div className="w-14 h-14 mb-3 rounded-2xl bg-red-50 ring-1 ring-red-100 flex items-center justify-center -rotate-3">
@@ -298,7 +309,7 @@ export default function ChatPage() {
                         </div>
                     ) : (
                         messages.map((message, index) => {
-                            const isMine = message.senderId === user.id
+                            const isMine = message.senderId === currentUser?.id
                             const nextSame =
                                 index < messages.length - 1 &&
                                 messages[index + 1].senderId === message.senderId
@@ -320,7 +331,6 @@ export default function ChatPage() {
                                             className={`flex ${isMine ? 'justify-start' : 'justify-end'} animate-[chatIn_0.35s_ease-out_both]`}
                                             style={{ animationDelay: `${Math.min(index * 25, 250)}ms` }}
                                         >
-                                            {/* ستون کارت + متا — بدون هیچ bubble و بدون قرمز */}
                                             <div className="flex flex-col gap-1 max-w-[80%] sm:max-w-[65%]">
                                                 <SharedPinCard pin={message.pin} />
                                                 <span className={`text-[10px] tabular-nums px-2 font-medium ${isMine ? 'text-red-400' : 'text-gray-400'}`}>
@@ -418,7 +428,6 @@ export default function ChatPage() {
                     className="max-w-2xl mx-auto px-3 sm:px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
                 >
                     <div className="flex items-center gap-2.5">
-                        {/* دکمه ارسال */}
                         <button
                             type="submit"
                             disabled={!newMessage.trim() || sendMessage.isPending || isOverLimit}
@@ -429,13 +438,12 @@ export default function ChatPage() {
                                 }`}
                         >
                             {sendMessage.isPending ? (
-                                <Spinner size="md" />
+                                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                             ) : (
                                 <IoSend className="w-5 h-5" />
                             )}
                         </button>
 
-                        {/* input + counter */}
                         <div className="relative flex-1 min-w-0">
                             <input
                                 type="text"
@@ -448,7 +456,6 @@ export default function ChatPage() {
                                     }`}
                             />
 
-                            {/* پیل شمارنده */}
                             {newMessage.length > 0 && (
                                 <span
                                     className={`absolute left-2.5 top-1/2 -translate-y-1/2 inline-flex items-center gap-0.5 h-6 px-2 rounded-full text-[10px] font-bold tabular-nums transition-all duration-200 ${isOverLimit
@@ -466,7 +473,6 @@ export default function ChatPage() {
                         </div>
                     </div>
 
-                    {/* پیام خطا */}
                     {isOverLimit && (
                         <div className="mt-2 mr-14 flex items-center gap-1.5 text-[11px] text-red-500 font-medium animate-[slideDown_0.2s_ease-out]">
                             <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />

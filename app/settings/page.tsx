@@ -1,15 +1,18 @@
 "use client"
 
 import { useEffect, useState, startTransition } from 'react'
+import { createPortal } from 'react-dom'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/lib/authStore'
 import { compressImage } from '@/lib/imageCompress'
+import AuthGate from '../components/AuthGate'
 import type { CurrentUser } from '../types/user'
 
 import {
     FiUser,
+    FiSettings,
     FiAtSign,
     FiMail,
     FiLock,
@@ -37,6 +40,20 @@ export default function SettingsPage() {
     const queryClient = useQueryClient()
     const { user, setUser } = useAuthStore()
 
+    const { data: meData, isLoading: checkingAuth } = useQuery({
+        queryKey: ['me'],
+        queryFn: async () => {
+            const res = await fetch('/api/auth/me')
+            if (!res.ok) return null
+            const data = await res.json()
+            return data.user
+        },
+        enabled: !user,
+        staleTime: 60 * 1000,
+    })
+
+    const currentUser = user || meData
+
     const [name, setName] = useState('')
     const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
@@ -56,26 +73,22 @@ export default function SettingsPage() {
     const [isPreparing, setIsPreparing] = useState(false)
 
     useEffect(() => {
-        if (user) {
-            startTransition(() => {
-                setName(user.name || '')
-                setUsername(user.username || '')
-                setEmail(user.email || '')
-                setBio(user.bio || '')
-                setAvatar(user.avatar || '')
-            })
-            return
+        if (!user && meData) {
+            setUser(meData)
         }
+    }, [user, meData, setUser])
 
-        fetch('/api/auth/me')
-            .then((res) => (res.ok ? (res.json() as Promise<MeResponse>) : null))
-            .then((data) => {
-                if (data?.user) {
-                    setUser(data.user)
-                }
+    useEffect(() => {
+        if (currentUser) {
+            startTransition(() => {
+                setName(currentUser.name || '')
+                setUsername(currentUser.username || '')
+                setEmail(currentUser.email || '')
+                setBio(currentUser.bio || '')
+                setAvatar(currentUser.avatar || '')
             })
-            .catch(console.error)
-    }, [user, setUser])
+        }
+    }, [currentUser])
 
     const uploadAvatarMutation = useMutation({
         mutationFn: async (file: File): Promise<UploadResponse> => {
@@ -179,11 +192,11 @@ export default function SettingsPage() {
 
     const handleReset = () => {
         if (!user) return
-        setName(user.name || '')
-        setUsername(user.username || '')
-        setEmail(user.email || '')
-        setBio(user.bio || '')
-        setAvatar(user.avatar || '')
+        setName(currentUser.name || '')
+        setUsername(currentUser.username || '')
+        setEmail(currentUser.email || '')
+        setBio(currentUser.bio || '')
+        setAvatar(currentUser.avatar || '')
         setOldPassword('')
         setNewPassword('')
         setError('')
@@ -207,14 +220,25 @@ export default function SettingsPage() {
         }
     }
 
-    if (!user) {
+    if (checkingAuth && !currentUser) {
         return (
             <main dir="rtl" className="min-h-[80vh] flex justify-center items-center bg-[#FAFAFB]">
                 <div className="flex flex-col items-center gap-3">
                     <span className="w-7 h-7 border-[3px] border-gray-200 border-t-red-600 rounded-full animate-spin" />
-                    <p className="text-xs text-gray-400 font-medium">در حال بارگذاری...</p>
+                    <p className="text-xs text-gray-400 font-medium">در حال بررسی ورود...</p>
                 </div>
             </main>
+        )
+    }
+
+    if (!currentUser) {
+        return (
+            <AuthGate
+                icon={FiSettings}
+                title="تنظیمات حساب کاربری"
+                description="برای مدیریت اطلاعات کاربری، امنیت و ویرایش پروفایل ابتدا وارد شوید."
+                redirectUrl="/settings"
+            />
         )
     }
 
@@ -222,11 +246,11 @@ export default function SettingsPage() {
     const isUploading = uploadAvatarMutation.isPending || isPreparing
 
     const hasChanges =
-        name !== (user.name || '') ||
-        username !== (user.username || '') ||
-        email !== (user.email || '') ||
-        bio !== (user.bio || '') ||
-        avatar !== (user.avatar || '') ||
+        name !== (currentUser.name || '') ||
+        username !== (currentUser.username || '') ||
+        email !== (currentUser.email || '') ||
+        bio !== (currentUser.bio || '') ||
+        avatar !== (currentUser.avatar || '') ||
         oldPassword.length > 0 ||
         newPassword.length > 0
 
@@ -246,7 +270,6 @@ export default function SettingsPage() {
             />
 
             <div className="relative mx-auto max-w-3xl">
-                {/* ═══ هدر جمع‌وجور و استاندارد ═══ */}
                 <header className="mb-6 flex items-center justify-between gap-3 animate-[fadeInUp_0.3s_ease-out_both]">
                     <div className="flex items-center gap-3">
                         <Link
@@ -271,7 +294,6 @@ export default function SettingsPage() {
                     </div>
                 </header>
 
-                {/* ── پیام‌های وضعیت ── */}
                 {success && (
                     <div className="mb-4 flex items-center justify-between gap-2.5 rounded-2xl bg-emerald-50/90 px-4 py-3 text-emerald-700 ring-1 ring-emerald-200/80 animate-[fadeInUp_0.25s_ease-out]">
                         <div className="flex items-center gap-2">
@@ -305,11 +327,9 @@ export default function SettingsPage() {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
-                    {/* ═══ باکس واحد تنظیمات ═══ */}
                     <div className="overflow-hidden rounded-3xl bg-white ring-1 ring-gray-200/80 shadow-sm">
                         <div className="h-1 bg-gradient-to-l from-red-500 via-rose-500 to-orange-400" />
 
-                        {/* ─── بخش ۱: تصویر و هویت پروفایل ─── */}
                         <div className="p-5 sm:p-6 border-b border-gray-100">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
@@ -322,7 +342,7 @@ export default function SettingsPage() {
                                                     className="h-full w-full object-cover"
                                                 />
                                             ) : (
-                                                user.username?.charAt(0).toUpperCase()
+                                                currentUser.username?.charAt(0).toUpperCase()
                                             )}
                                         </div>
 
@@ -352,10 +372,10 @@ export default function SettingsPage() {
 
                                     <div className="min-w-0">
                                         <p className="truncate text-sm font-bold text-gray-900">
-                                            {name || user.name || 'کاربر'}
+                                            {name || currentUser.name || 'کاربر'}
                                         </p>
                                         <p className="truncate text-xs text-gray-400 mt-0.5" dir="ltr">
-                                            @{username || user.username}
+                                            @{username || currentUser.username}
                                         </p>
                                         <p className="text-[11px] text-gray-400 mt-1">
                                             {isPreparing
@@ -396,7 +416,6 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        {/* ─── بخش ۲: اطلاعات شخصی ─── */}
                         <div className="p-5 sm:p-6 border-b border-gray-100">
                             <div className="mb-4 flex items-center gap-2">
                                 <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-50 text-red-600">
@@ -408,7 +427,6 @@ export default function SettingsPage() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {/* نام کامل */}
                                 <div>
                                     <label
                                         htmlFor="settings-name"
@@ -431,7 +449,6 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                {/* نام کاربری */}
                                 <div>
                                     <label
                                         htmlFor="settings-username"
@@ -455,7 +472,6 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                {/* ایمیل */}
                                 <div className="sm:col-span-2">
                                     <label
                                         htmlFor="settings-email"
@@ -479,7 +495,6 @@ export default function SettingsPage() {
                                     </div>
                                 </div>
 
-                                {/* بیوگرافی */}
                                 <div className="sm:col-span-2">
                                     <div className="flex items-center justify-between mb-1.5">
                                         <label
@@ -507,7 +522,6 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        {/* ─── بخش ۳: امنیت و رمز عبور ─── */}
                         <div className="p-5 sm:p-6">
                             <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                                 <div className="flex items-center gap-2">
@@ -524,7 +538,6 @@ export default function SettingsPage() {
                             </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {/* رمز فعلی */}
                                 <div>
                                     <label
                                         htmlFor="settings-old-pass"
@@ -589,7 +602,6 @@ export default function SettingsPage() {
                             </div>
                         </div>
 
-                        {/* ─── نوار ذخیره چسبیده به کف باکس ─── */}
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/70 px-5 sm:px-6 py-3.5">
                             <div className="hidden sm:flex items-center gap-2 text-[11px]">
                                 {hasChanges ? (
@@ -644,7 +656,6 @@ export default function SettingsPage() {
                         </div>
                     </div>
 
-                    {/* ═══ منطقه خطر (جمع‌وجور و مجزا) ═══ */}
                     <section className="rounded-2xl bg-white p-4 sm:p-5 ring-1 ring-red-200/70">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div className="flex items-start gap-3">
@@ -677,10 +688,9 @@ export default function SettingsPage() {
                 </form>
             </div>
 
-            {/* ═══ مودال تأیید حذف حساب ═══ */}
-            {isDeleteModalOpen && (
+            {isDeleteModalOpen && createPortal(
                 <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-[fadeIn_0.15s_ease-out]"
+                    className="fixed inset-0 z-[99999] w-screen h-screen min-h-dvh flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-[fadeIn_0.15s_ease-out]"
                     onClick={() => {
                         if (!deleteAccountMutation.isPending) {
                             setIsDeleteModalOpen(false)
@@ -689,7 +699,8 @@ export default function SettingsPage() {
                     }}
                 >
                     <div
-                        className="relative w-full max-w-sm rounded-3xl bg-white p-5 sm:p-6 shadow-2xl ring-1 ring-black/5 animate-[fadeInUp_0.2s_ease-out]"
+                        dir="rtl"
+                        className="relative w-full max-w-sm rounded-3xl bg-white p-5 sm:p-6 shadow-2xl ring-1 ring-black/5 animate-[scaleUp_0.2s_ease-out] my-auto"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <button
@@ -748,11 +759,11 @@ export default function SettingsPage() {
                                 disabled={deleteConfirmText !== 'حذف' || deleteAccountMutation.isPending}
                                 className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-700
                                     py-2.5 text-xs font-bold text-white transition-colors cursor-pointer
-                                    disabled:opacity-40 disabled:cursor-not-allowed"
+                                    disabled:opacity-40 disabled:cursor-not-allowed shadow-md shadow-red-200"
                             >
                                 {deleteAccountMutation.isPending ? (
                                     <>
-                                        <span className="h-3.5 w-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                        <span className="h-3.5 w-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin shrink-0" />
                                         در حال حذف...
                                     </>
                                 ) : (
@@ -764,7 +775,8 @@ export default function SettingsPage() {
                             </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <style>{`

@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
     try {
         const categories = await prisma.category.findMany({
@@ -10,7 +13,7 @@ export async function GET() {
                 id: true,
                 slug: true,
                 name: true,
-                 icon: true,
+                icon: true,
                 color: true,
                 _count: {
                     select: { pins: true }
@@ -22,7 +25,9 @@ export async function GET() {
             { categories },
             {
                 headers: {
-                    'Cache-Control': 'public, max-age=300, stale-while-revalidate=600',
+                    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                    'Pragma': 'no-cache',
+                    'Expires': '0',
                 },
             }
         )

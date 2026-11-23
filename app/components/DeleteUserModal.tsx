@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { FiX, FiAlertTriangle, FiTrash2 } from 'react-icons/fi'
 
 type DeleteUserModalProps = {
@@ -18,13 +19,20 @@ export default function DeleteUserModal({
     onClose,
     onDeleted,
 }: DeleteUserModalProps) {
-    // ═══ دو مرحله ═══
-    // ۱: هشدار خطر — دکمه «فهمیدم، ادامه»
-    // ۲: تایپ کلمه تأیید — دکمه حذف فعال می‌شود
+    const [mounted, setMounted] = useState(false)
     const [step, setStep] = useState<1 | 2>(1)
     const [confirmText, setConfirmText] = useState('')
     const [deleting, setDeleting] = useState(false)
     const [error, setError] = useState('')
+
+    useEffect(() => {
+        setMounted(true)
+        const prevOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prevOverflow
+        }
+    }, [])
 
     const handleDelete = async () => {
         setDeleting(true)
@@ -46,17 +54,26 @@ export default function DeleteUserModal({
         }
     }
 
-    return (
-        <div className="fixed inset-0 z-[150] bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md">
-                {/* هدر — همیشه قرمز هشدار */}
+    if (!mounted) return null
+
+    const modalContent = (
+        <div
+            className="fixed inset-0 z-[99999] w-screen h-screen min-h-dvh bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose()
+            }}
+        >
+            <div
+                dir="rtl"
+                className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md animate-[scaleUp_0.2s_ease-out] my-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="w-14 h-14 mx-auto mb-4 bg-red-50 rounded-2xl flex items-center justify-center">
                     <FiAlertTriangle className="text-red-600 text-xl" />
                 </div>
 
                 {step === 1 ? (
                     <>
-                        {/* ═══ مرحله ۱: هشدار ═══ */}
                         <h2 className="text-lg font-bold text-gray-900 text-center mb-2">
                             حذف کاربر @{username}
                         </h2>
@@ -96,7 +113,6 @@ export default function DeleteUserModal({
                     </>
                 ) : (
                     <>
-                        {/* ═══ مرحله ۲: تأیید با تایپ ═══ */}
                         <h2 className="text-lg font-bold text-gray-900 text-center mb-2">
                             تأیید نهایی
                         </h2>
@@ -153,4 +169,6 @@ export default function DeleteUserModal({
             </div>
         </div>
     )
+
+    return createPortal(modalContent, document.body)
 }

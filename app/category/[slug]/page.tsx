@@ -102,7 +102,6 @@ export default function CategoryPage() {
         <div dir="rtl" className="min-h-screen bg-white">
             <div className="p-4 md:p-6 mx-auto">
 
-                {/* ═══ هدر — مینیمال ═══ */}
                 <div className="flex items-center gap-3 mb-6 sm:mb-8">
                     <Link
                         href="/"
@@ -137,7 +136,6 @@ export default function CategoryPage() {
                     </h1>
                 </div>
 
-                {/* ═══ محتوا ═══ */}
                 {isLoading ? (
                     <PinGridSkeleton count={12} />
                 ) : isError ? (
@@ -173,7 +171,6 @@ export default function CategoryPage() {
                     </div>
                 )}
 
-                {/* ═══ infinite scroll ═══ */}
                 {hasNextPage && (
                     <div ref={(el) => {
                     }} />
@@ -189,7 +186,6 @@ export default function CategoryPage() {
                 )}
             </div>
 
-            {/* ═══ دسته‌های دیگر — مینیمال پایین ═══ */}
             <div className="p-4 md:p-6 mx-auto mt-16 pt-4 border-t border-gray-100">
                 <p className="text-xs font-semibold text-gray-400 mb-3 pt-2">دسته‌بندی‌های دیگر</p>
                 <div className="flex items-center gap-2 flex-wrap">

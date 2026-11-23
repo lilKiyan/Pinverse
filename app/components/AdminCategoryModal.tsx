@@ -1,6 +1,8 @@
 "use client"
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { FiX, FiSave, FiAlertCircle } from 'react-icons/fi'
 import { ICON_REGISTRY, getCategoryIcon } from '@/lib/categories'
 
@@ -21,14 +23,25 @@ export default function AdminCategoryModal({
     onClose,
     onSaved,
 }: AdminCategoryModalProps) {
+    const queryClient = useQueryClient()
     const isEdit = !!category
 
+    const [mounted, setMounted] = useState(false)
     const [name, setName] = useState(category?.name || '')
     const [slug, setSlug] = useState(category?.slug || '')
     const [icon, setIcon] = useState(category?.icon || 'LuTag')
     const [color, setColor] = useState(category?.color || '#9ca3af')
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
+
+    useEffect(() => {
+        setMounted(true)
+        const prevOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prevOverflow
+        }
+    }, [])
 
     const SelectedIcon = getCategoryIcon(icon)
 
@@ -62,6 +75,8 @@ export default function AdminCategoryModal({
             }
 
             const data = await res.json()
+            queryClient.invalidateQueries({ queryKey: ['categories-all'] })
+            queryClient.invalidateQueries({ queryKey: ['admin-categories'] })
             onSaved(data.message || 'دسته‌بندی ذخیره شد')
             onClose()
         } catch (err) {
@@ -70,15 +85,24 @@ export default function AdminCategoryModal({
         }
     }
 
-    return (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-[2px]
-            flex items-end sm:items-center justify-center sm:p-4">
-            <div className="bg-white shadow-2xl w-full sm:max-w-lg
+    if (!mounted) return null
+
+    const modalContent = (
+        <div
+            className="fixed inset-0 z-[99999] w-screen h-screen min-h-dvh bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center sm:p-4 overflow-y-auto"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose()
+            }}
+        >
+            <div
+                dir="rtl"
+                className="bg-white shadow-2xl w-full sm:max-w-lg
                 rounded-t-3xl sm:rounded-3xl overflow-hidden
                 animate-[sheetUp_0.3s_cubic-bezier(0.32,0.72,0,1)]
-                max-h-[92dvh] flex flex-col">
+                max-h-[92dvh] flex flex-col my-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
 
-                {/* ═══ هدر ═══ */}
                 <div className="shrink-0 flex items-center justify-between px-5 sm:px-6 pt-5 pb-3">
                     <h2 className="text-base sm:text-lg font-bold text-gray-900">
                         {isEdit ? 'ویرایش دسته‌بندی' : 'دسته‌بندی جدید'}
@@ -94,17 +118,14 @@ export default function AdminCategoryModal({
                     </button>
                 </div>
 
-                {/* ═══ بدنه اسکرول‌شونده ═══ */}
                 <div className="flex-1 overflow-y-auto px-5 sm:px-6 pb-4
                     [&::-webkit-scrollbar]:w-1.5
                     [&::-webkit-scrollbar-thumb]:bg-gray-200
                     [&::-webkit-scrollbar-thumb]:rounded-full
                     [&::-webkit-scrollbar-track]:bg-transparent">
 
-                    {/* ═══ ۱. پیش‌نمایش زنده — badge واقعی که می‌سازی ═══ */}
                     <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm pb-4 -mt-1 pt-1">
                         <div className="flex items-center gap-3.5 bg-gray-50 rounded-2xl p-3.5 ring-1 ring-gray-100">
-                            {/* آیکون — همونی که انتخاب می‌کنی */}
                             <span
                                 className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0
                                     transition-all duration-300"
@@ -117,7 +138,6 @@ export default function AdminCategoryModal({
                             </span>
 
                             <div className="flex-1 min-w-0 text-right">
-                                {/* متن زنده — همون چیزی که تایپ می‌کنی */}
                                 <p className="font-bold text-sm text-gray-900 truncate">
                                     {name.trim() || 'نام دسته...'}
                                 </p>
@@ -126,7 +146,6 @@ export default function AdminCategoryModal({
                                 </p>
                             </div>
 
-                            {/* نقطه رنگی — مثل badge کارت */}
                             <span
                                 className="w-2.5 h-2.5 rounded-full shrink-0 transition-colors duration-300"
                                 style={{ backgroundColor: color }}
@@ -143,7 +162,6 @@ export default function AdminCategoryModal({
                     )}
 
                     <div className="space-y-4">
-                        {/* ═══ ۲. نام + slug — یه ردیف فشرده ═══ */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                             <div>
                                 <label className="block text-xs font-semibold text-gray-500 mb-1.5">نام</label>
@@ -170,7 +188,7 @@ export default function AdminCategoryModal({
                                     onChange={(e) => setSlug(e.target.value.toLowerCase())}
                                     dir="ltr"
                                     placeholder="cooking"
-                                    disabled={isEdit}   // 🔒 اسلاگ پس از ساخت قفل است — URL نمی‌شکند
+                                    disabled={isEdit}  
                                     className={`w-full border-2 border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900
                                         focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100/50 transition-all text-left
                                         ${isEdit ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
@@ -178,7 +196,6 @@ export default function AdminCategoryModal({
                             </div>
                         </div>
 
-                        {/* ═══ ۳. آیکون‌گرید ═══ */}
                         <div>
                             <label className="flex items-center justify-between text-xs font-semibold text-gray-500 mb-2">
                                 آیکون
@@ -211,7 +228,6 @@ export default function AdminCategoryModal({
                             </div>
                         </div>
 
-                        {/* ═══ ۴. رنگ ═══ */}
                         <div>
                             <label className="block text-xs font-semibold text-gray-500 mb-2">رنگ هویتی</label>
                             <div className="flex items-center gap-2.5">
@@ -223,7 +239,6 @@ export default function AdminCategoryModal({
                                         hover:border-gray-300 transition-colors"
                                 />
 
-                                {/* رنگ‌های پیشنهادی سریع */}
                                 <div className="flex items-center gap-1.5 flex-1 flex-wrap">
                                     {['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b','#311B92','#FFEB3B','#F48FB1'].map((c) => (
                                         <button
@@ -243,7 +258,6 @@ export default function AdminCategoryModal({
                     </div>
                 </div>
 
-                {/* ═══ فوتر — دکمه‌ها ═══ */}
                 <div className="shrink-0 px-5 sm:px-6 py-4 border-t border-gray-100
                     flex items-center gap-2.5
                     pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4">
@@ -263,14 +277,21 @@ export default function AdminCategoryModal({
                             hover:shadow-lg active:scale-[0.98]"
                     >
                         {saving ? (
-                            <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            <>
+                                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin shrink-0" />
+                                <span>در حال ذخیره...</span>
+                            </>
                         ) : (
-                            <FiSave className="w-4 h-4" />
+                            <>
+                                <FiSave className="w-4 h-4" />
+                                <span>ذخیره</span>
+                            </>
                         )}
-                        ذخیره
                     </button>
                 </div>
             </div>
         </div>
     )
+
+    return createPortal(modalContent, document.body)
 }

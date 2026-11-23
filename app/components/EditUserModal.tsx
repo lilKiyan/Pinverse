@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { FiX, FiSave, FiAlertCircle } from 'react-icons/fi'
 
 type EditUserModalProps = {
@@ -20,6 +21,7 @@ export default function EditUserModal({
     onClose,
     onSaved,
 }: EditUserModalProps) {
+    const [mounted, setMounted] = useState(false)
     const [name, setName] = useState(initialName)
     const [username, setUsername] = useState(initialUsername)
     const [bio, setBio] = useState(initialBio || '')
@@ -27,12 +29,21 @@ export default function EditUserModal({
     const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
 
+    useEffect(() => {
+        setMounted(true)
+        const prevOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prevOverflow
+        }
+    }, [])
+
     const handleSave = async () => {
+        if (saving) return
         setSaving(true)
         setError('')
 
         try {
-            // فقط فیلدهای تغییر یافته را بفرست — PATCH پارسیل است
             const body: Record<string, string> = {}
 
             if (name.trim() !== initialName) body.name = name.trim()
@@ -66,9 +77,20 @@ export default function EditUserModal({
         }
     }
 
-    return (
-        <div className="fixed inset-0 z-[100] bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md">
+    if (!mounted) return null
+
+    const modalContent = (
+        <div
+            className="fixed inset-0 z-[99999] w-screen h-screen min-h-dvh bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose()
+            }}
+        >
+            <div
+                dir="rtl"
+                className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md animate-[scaleUp_0.2s_ease-out] my-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <div className="flex items-center justify-between mb-5">
                     <h2 className="text-lg font-bold text-gray-900">ویرایش کاربر</h2>
                     <button
@@ -88,7 +110,6 @@ export default function EditUserModal({
                 )}
 
                 <div className="space-y-4">
-                    {/* نام */}
                     <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                             نام کامل
@@ -101,7 +122,6 @@ export default function EditUserModal({
                         />
                     </div>
 
-                    {/* یوزرنیم */}
                     <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                             نام کاربری
@@ -109,13 +129,12 @@ export default function EditUserModal({
                         <input
                             type="text"
                             value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            onChange={(e) => setUsername(e.target.value.toLowerCase())}
                             dir="ltr"
-                            className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100/50 transition-all text-right"
+                            className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100/50 transition-all text-left"
                         />
                     </div>
 
-                    {/* بیو */}
                     <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                             بیوگرافی
@@ -124,11 +143,12 @@ export default function EditUserModal({
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
                             rows={3}
-                            className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100/50 transition-all resize-none"
+                            maxLength={160}
+                            placeholder="درباره این کاربر..."
+                            className="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-4 focus:ring-red-100/50 transition-all resize-none"
                         />
                     </div>
 
-                    {/* پسورد موقت */}
                     <div>
                         <label className="block text-xs font-semibold text-gray-500 mb-1.5">
                             پسورد جدید <span className="text-gray-400 font-normal">(اختیاری — موقت برای کاربر)</span>
@@ -149,25 +169,34 @@ export default function EditUserModal({
 
                 <div className="flex gap-2.5 mt-6">
                     <button
+                        type="button"
                         onClick={onClose}
                         className="flex-1 h-11 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition-colors cursor-pointer"
                     >
                         انصراف
                     </button>
                     <button
+                        type="button"
                         onClick={handleSave}
                         disabled={saving}
-                        className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+                        className="flex-1 h-11 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-red-200"
                     >
                         {saving ? (
-                            <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                            <>
+                                <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin shrink-0" />
+                                <span>در حال ذخیره...</span>
+                            </>
                         ) : (
-                            <FiSave className="w-4 h-4" />
+                            <>
+                                <FiSave className="w-4 h-4" />
+                                <span>ذخیره</span>
+                            </>
                         )}
-                        ذخیره
                     </button>
                 </div>
             </div>
         </div>
     )
+
+    return createPortal(modalContent, document.body)
 }

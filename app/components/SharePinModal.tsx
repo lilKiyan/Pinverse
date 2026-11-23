@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import {
@@ -14,7 +15,6 @@ import {
     FiMessageCircle,
 } from 'react-icons/fi'
 
-// ── تایپ مخاطب (همان UserMini کوتاه‌شده) ──
 type ShareTarget = {
     id: string
     name: string
@@ -44,18 +44,26 @@ export default function SharePinModal({
     const [sentIds, setSentIds] = useState<Set<string>>(new Set())
     const [copied, setCopied] = useState(false)
     const [error, setError] = useState('')
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+        const prevOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prevOverflow
+        }
+    }, [])
 
     const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
     const [debouncedQuery, setDebouncedQuery] = useState('')
 
-    // ── debounce جستجو (الگوی Navbar خودت) ──
     useEffect(() => {
         if (searchTimer.current) clearTimeout(searchTimer.current)
         const t = setTimeout(() => setDebouncedQuery(query.trim()), 250)
         return () => clearTimeout(t)
     }, [query])
 
-    // ── Query: مخاطبین (چت‌ها + فالوشده‌ها) ──
     const {
         data: targets,
         isLoading: loadingTargets,
@@ -70,7 +78,6 @@ export default function SharePinModal({
         staleTime: 30 * 1000,
     })
 
-    // ── Mutation: ارسال پین ──
     const shareMutation = useMutation({
         mutationFn: async (recipientIds: string[]) => {
             const res = await fetch(`/api/pins/${pinId}/share`, {
@@ -96,7 +103,6 @@ export default function SharePinModal({
         })
     }
 
-    // ── کپی لینک ──
     const handleCopyLink = async () => {
         const url = `${window.location.origin}/pin/${pinId}`
 
@@ -117,7 +123,6 @@ export default function SharePinModal({
         setTimeout(() => setCopied(false), 2000)
     }
 
-    // ── بستن با Escape ──
     useEffect(() => {
         const handleKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose()
@@ -137,7 +142,6 @@ export default function SharePinModal({
                 key={target.id}
                 className="flex items-center mb-0 gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 transition-colors"
             >
-                {/* آواتار */}
                 <div className="w-10 h-10 rounded-full overflow-hidden bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white font-bold shrink-0">
                     {target.avatar ? (
                         <Image
@@ -152,13 +156,11 @@ export default function SharePinModal({
                     )}
                 </div>
 
-                {/* نام و یوزرنیم */}
                 <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-gray-900 truncate">{target.name}</p>
                     <p className="text-xs text-right text-gray-400 truncate" dir="ltr">@{target.username}</p>
                 </div>
 
-                {/* دکمه ارسال */}
                 <button
                     onClick={() => handleShare(target)}
                     disabled={isSent || shareMutation.isPending}
@@ -186,9 +188,20 @@ export default function SharePinModal({
         )
     }
 
-    return (
-        <div className="fixed mb-0 inset-0 z-[100] bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-4 animate-[fadeIn_0.2s_ease-out]">
-            <div className="bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 w-full max-w-md overflow-hidden animate-[fadeInUp_0.3s_ease-out]">
+    if (!mounted) return null
+
+    const modalContent = (
+        <div
+            className="fixed inset-0 z-[99999] w-screen h-screen min-h-dvh bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose()
+            }}
+        >
+            <div
+                dir="rtl"
+                className="bg-white rounded-3xl shadow-2xl ring-1 ring-black/5 w-full max-w-md overflow-hidden animate-[scaleUp_0.2s_ease-out] my-auto"
+                onClick={(e) => e.stopPropagation()}
+            >
 
                 {/* ═══ هدر ═══ */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
@@ -326,6 +339,8 @@ export default function SharePinModal({
             </div>
         </div>
     )
+
+    return createPortal(modalContent, document.body)
 }
 
 // ── کامپوننت کوچک: عنوان سکشن ──

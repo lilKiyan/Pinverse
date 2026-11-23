@@ -1,8 +1,7 @@
 
-// اطلاعات ذخیره‌شدن پین در برد
 export type SavedBoardInfo = {
     boardId: string
-    boardName: string | null   // API می‌فرسته: s.board?.name || null
+    boardName: string | null   
 }
 
 export type CategoryInfo = {
@@ -13,7 +12,6 @@ export type CategoryInfo = {
 }
 
 export type PinDTO = {
-    // هسته — همیشه هستن
     id: string
     title: string
     description: string | null
@@ -23,7 +21,6 @@ export type PinDTO = {
     userId: string
     createdAt: string
     isReportedByMe?: boolean
-    // بسته به API ممکنه باشن یا نباشن
     updatedAt?: string
     link?: string | null
     isOwner?: boolean
@@ -32,5 +29,4 @@ export type PinDTO = {
     savedBoards?: SavedBoardInfo[]
 }
 
-// پیش‌نمایش پینی که در چت share شده
 export type SharedPinInfo = Pick<PinDTO, 'id' | 'title' | 'imageUrl' | 'imageWidth' | 'imageHeight'>

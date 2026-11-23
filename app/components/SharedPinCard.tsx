@@ -28,7 +28,6 @@ export default function SharedPinCard({ pin }: SharedPinCardProps) {
     active:scale-[0.97]"
             >
 
-                {/* تصویر — نسبت واقعی پین */}
                 <Image
                     src={pin.imageUrl}
                     alt={pin.title}

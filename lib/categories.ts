@@ -1,7 +1,7 @@
 
 import {
     LuPalette, LuUtensils, LuPlane, LuMonitor, LuShirt,
-    LuDumbbell, LuSprout, LuCamera, LuLightbulb, LuMusic, LuTag, LuSofa, LuPizza, LuGuitar,LuDog
+    LuDumbbell, LuSprout, LuCamera, LuLightbulb, LuMusic, LuTag, LuSofa, LuPizza, LuGuitar,LuDog,LuGamepad2
 } from 'react-icons/lu'
 import type { IconType } from 'react-icons'
 
@@ -21,7 +21,10 @@ export const ICON_REGISTRY: Record<string, IconType> = {
     sofa: LuSofa,
     pizza: LuPizza,
     guitar: LuGuitar,
-    animal:LuDog
+    animal: LuDog,
+    game: LuGamepad2,
+    games: LuGamepad2,
+    gaming: LuGamepad2,
 }
 
 export type CategoryMeta = {
@@ -44,6 +47,7 @@ export const CATEGORIES: CategoryMeta[] = [
     { slug: 'photography', name: 'عکاسی', icon: 'photography', iconComponent: ICON_REGISTRY['photography'], color: '#64748b' },
     { slug: 'ideas', name: 'ایده‌های خلاقانه', icon: 'ideas', iconComponent: ICON_REGISTRY['ideas'], color: '#eab308' },
     { slug: 'music', name: 'موسیقی', icon: 'music', iconComponent: ICON_REGISTRY['music'], color: '#f43f5e' },
+    { slug: 'games', name: 'بازی‌های ویدیویی', icon: 'game', iconComponent: ICON_REGISTRY['game'], color: '#0D47A1' },
     { slug: 'other', name: 'سایر', icon: 'other', iconComponent: ICON_REGISTRY['other'], color: '#9ca3af' },
 ]
 

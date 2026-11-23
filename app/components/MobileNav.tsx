@@ -33,7 +33,6 @@ const MobileNav = () => {
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-50 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+14px)] pt-2 pointer-events-none">
             <div className="flex items-center justify-center gap-2.5">
 
-                {/* ═══ دکمه‌ی + جدا (سمت راست مثل عکس) ═══ */}
                 <Link
                     href="/create"
                     aria-label="ساخت پین"
@@ -44,7 +43,6 @@ const MobileNav = () => {
                         hover:-translate-y-0.5 active:scale-90
                         transition-all duration-300"
                 >
-                    {/* هاله پالس وقتی فعال نیست */}
                     {!isCreateActive && (
                         <span className="absolute inset-0 rounded-full bg-red-500/30 blur-md animate-[radarPulse_2.4s_ease-out_infinite] pointer-events-none" />
                     )}
@@ -55,7 +53,6 @@ const MobileNav = () => {
                     />
                 </Link>
 
-                {/* ═══ داک قرصی ═══ */}
                 <div
                     className="pointer-events-auto flex items-center gap-0.5 bg-gray-100/60 backdrop-blur-2xl rounded-full p-1.5
                         shadow-[0_8px_30px_-8px_rgba(0,0,0,0.18),0_2px_6px_rgba(0,0,0,0.05)]
@@ -83,7 +80,6 @@ const MobileNav = () => {
                                         : 'px-3.5 hover:bg-white/60 active:scale-95'
                                     }`}
                             >
-                                {/* آیکون + بج */}
                                 <span className="relative flex shrink-0">
                                     <Icon
                                         className={`w-[19px] h-[19px] transition-all duration-300
@@ -93,7 +89,6 @@ const MobileNav = () => {
                                             }`}
                                     />
 
-                                    {/* بج پیام نخوانده */}
                                     {showBadge && (
                                         <span className="absolute -top-0.5 -left-1 flex">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
@@ -109,7 +104,6 @@ const MobileNav = () => {
                                     )}
                                 </span>
 
-                                {/* لیبل — با max-width باز و بسته میشه (قلب انیمیشن) */}
                                 <span
                                     className={`overflow-hidden whitespace-nowrap text-[12px] font-bold transition-all duration-300 ease-out
                                         ${active

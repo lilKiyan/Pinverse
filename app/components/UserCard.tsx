@@ -35,7 +35,6 @@ export default function UserCard({
         href={`/user/${user.id}`}
         className="flex items-center gap-4 flex-1 min-w-0 no-underline group"
       >
-        {/* آواتار با حلقه گرادیانتی */}
         <div className="p-[2.5px] rounded-full bg-gradient-to-br from-red-500 via-rose-500 to-orange-400 shrink-0">
           <div className="relative w-14 h-14 rounded-full overflow-hidden bg-white ring-2 ring-white flex items-center justify-center text-xl font-bold text-white bg-gradient-to-br from-red-500 to-orange-500">
             {user.avatar ? (
@@ -54,7 +53,6 @@ export default function UserCard({
           </div>
         </div>
 
-        {/* اطلاعات */}
         <div className="flex-1 min-w-0">
           <p className="font-bold text-gray-900 truncate text-[15px] group-hover:text-red-600 transition-colors">
             {user.name}
@@ -74,7 +72,6 @@ export default function UserCard({
         </div>
       </Link>
 
-      {/* دکمه فالو (اگه خود کاربر نباشه) */}
       {!isMe && (
         <button
           onClick={() => onToggleFollow(user)}

@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useAuthStore } from '@/lib/authStore'
 import { FiMessageCircle, FiArrowLeft, FiArrowRight, FiMail } from 'react-icons/fi'
 import { useQuery } from '@tanstack/react-query'
+import AuthGate from '../components/AuthGate'
+import Spinner from '../components/Spinner'
 
 type Conversation = {
     id: string
@@ -50,36 +52,51 @@ const SkeletonRow = ({ delay }: { delay: number }) => (
 )
 
 export default function MessagesPage() {
-    const { user } = useAuthStore()
+    const user = useAuthStore((state) => state.user)
+
+    const { data: meData, isLoading: checkingAuth } = useQuery({
+        queryKey: ['me'],
+        queryFn: async () => {
+            const res = await fetch('/api/auth/me')
+            if (!res.ok) return null
+            const data = await res.json()
+            return data.user
+        },
+        enabled: !user,
+        staleTime: 60 * 1000,
+    })
+
+    const currentUser = user || meData
 
     const { data: conversations = [], isLoading: loading, isError, error, refetch } = useQuery<Conversation[]>({
-        queryKey: ['conversations', user?.id],
+        queryKey: ['conversations', currentUser?.id],
         queryFn: async () => {
             const res = await fetch('/api/conversations')
             if (!res.ok) throw new Error('خطا در دریافت گفتگوها')
             const data = await res.json()
             return data.conversations || []
         },
-        enabled: !!user,
+        enabled: !!currentUser,
         refetchInterval: 5000,
         staleTime: 2 * 1000,
     })
 
-
-    if (!user) {
+    if (checkingAuth && !currentUser) {
         return (
-            <main dir="rtl" className="min-h-screen flex flex-col items-center justify-center gap-5 px-4 bg-gradient-to-br from-gray-50 via-white to-red-50/40">
-                <div className="w-20 h-20 rounded-3xl bg-white shadow-xl shadow-gray-200/50 ring-1 ring-black/5 flex items-center justify-center rotate-3">
-                    <FiMail className="w-9 h-9 text-red-300" />
-                </div>
-                <p className="text-gray-700 font-bold text-lg">برای مشاهده پیام‌ها وارد شوید</p>
-                <Link
-                    href="/login"
-                    className="bg-red-600 text-white px-7 py-2.5 rounded-full font-bold text-sm shadow-lg shadow-red-200/70 hover:bg-red-700 hover:-translate-y-0.5 transition-all no-underline"
-                >
-                    ورود به حساب
-                </Link>
+            <main className="min-h-[70vh] flex items-center justify-center">
+                <Spinner size="lg" />
             </main>
+        )
+    }
+
+    if (!currentUser) {
+        return (
+            <AuthGate
+                icon={FiMessageCircle}
+                title="پیام‌ها و گفتگوها"
+                description="برای گفتگو با دوستان، ارسال پیام و اشتراک‌گذاری پین‌ها وارد شوید."
+                redirectUrl="/messages"
+            />
         )
     }
 
@@ -89,12 +106,10 @@ export default function MessagesPage() {
             dir="rtl"
             className="relative min-h-screen overflow-hidden bg-gradient-to-br from-gray-50 via-white to-red-50/40 px-4 py-6 md:py-10"
         >
-            {/* عناصر تزئینی پس‌زمینه */}
             <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-100/50 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-32 -right-32 w-[28rem] h-[28rem] bg-orange-100/40 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative max-w-6xl mx-auto">
-                {/* ═══ هدر ═══ */}
                 <div className="flex items-center gap-2 mb-8 animate-[msgIn_0.5s_ease-out_both]">
                     <Link
                         href="/"
@@ -116,7 +131,6 @@ export default function MessagesPage() {
                     </div>
                 </div>
 
-                {/* ═══ محتوا ═══ */}
                 {loading ? (
                     <div className="space-y-2.5">
                         <SkeletonRow delay={0} />
@@ -178,7 +192,6 @@ export default function MessagesPage() {
                                         </div>
                                         <span className="absolute inset-0 rounded-full bg-red-400/30 blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                                        {/* ✅ نشانگر پیام جدید */}
                                         {conv.unreadCount > 0 && (
                                             <span className="absolute -top-1.5 -left-1.5 min-w-5 h-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white shadow-sm">
                                                 {conv.unreadCount > 9 ? '۹+' : conv.unreadCount}
@@ -192,11 +205,11 @@ export default function MessagesPage() {
                                         <p className="text-xs md:text-sm text-gray-500 truncate mt-0.5 leading-relaxed">
                                             {conv.lastMessage ? (
                                                 <>
-                                                    {conv.lastMessage.senderId === user.id && (
+                                                    {conv.lastMessage.senderId === currentUser.id && (
                                                         <span className="font-bold text-gray-400">شما: </span>
                                                     )}
                                                     {conv.lastMessage.pinId
-                                                        ? (conv.lastMessage.senderId === user.id
+                                                        ? (conv.lastMessage.senderId === currentUser.id
                                                             ? '📌 پینی را به اشتراک گذاشتید'
                                                             : '📌 پینی برای شما ارسال کرد')
                                                         : conv.lastMessage.content}

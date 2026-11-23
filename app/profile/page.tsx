@@ -6,8 +6,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import PinCard from '../components/PinCard'
 import PinGridSkeleton from '../components/skeletons/PinGridSkeleton'
 import UserProfileSkeleton from '../components/skeletons/UserProfileSkeleton'
+import AuthGate from '../components/AuthGate'
 import { useAuthStore } from '@/lib/authStore'
-import { FiAtSign, FiMail, FiUsers, FiImage, FiMapPin, FiGrid, FiPlus, FiUserPlus, FiLogIn } from 'react-icons/fi'
+import { FiAtSign, FiMail, FiUsers, FiImage, FiMapPin, FiGrid, FiPlus, FiUserPlus, FiLogIn, FiUser } from 'react-icons/fi'
 
 export default function ProfilePage() {
     const { user, setUser } = useAuthStore()
@@ -26,11 +27,11 @@ export default function ProfilePage() {
 
     const followingCount = followData?.followingCount ?? 0
 
-    const { isLoading: loadingUser } = useQuery({
+    const { data: meUser, isLoading: loadingUser } = useQuery({
         queryKey: ['me'],
         queryFn: async () => {
             const res = await fetch('/api/auth/me')
-            if (!res.ok) throw new Error('وارد نشده‌اید')
+            if (!res.ok) return null
             const data = await res.json()
             return data.user
         },
@@ -38,12 +39,13 @@ export default function ProfilePage() {
         staleTime: 5 * 60 * 1000,
     })
 
+    const currentUser = user || meUser
+
     useEffect(() => {
-        const cachedUser = queryClient.getQueryData(['me']) as any
-        if (!user && cachedUser) {
-            setUser(cachedUser)
+        if (!user && meUser) {
+            setUser(meUser)
         }
-    }, [user, setUser, queryClient])
+    }, [user, meUser, setUser])
 
     const {
         data: pins = [],
@@ -78,30 +80,18 @@ export default function ProfilePage() {
         queryClient.invalidateQueries({ queryKey: ['pins'] })
     }
 
-    if (loadingUser) {
+    if (loadingUser && !currentUser) {
         return <UserProfileSkeleton />
     }
 
-    if (!user) {
+    if (!currentUser) {
         return (
-            <main className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 pb-20">
-                <div className="max-w-sm w-full bg-white rounded-3xl p-8 shadow-xl shadow-red-100/30 ring-1 ring-black/5 flex flex-col items-center text-center space-y-4 animate-[fadeIn_0.3s_ease-out]">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-red-200">
-                        <FiAtSign className="w-7 h-7" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <h2 className="text-xl font-bold text-gray-900">حساب کاربری</h2>
-                        <p className="text-gray-500 text-sm">برای مشاهده پین‌ها و پروفایل خود وارد شوید.</p>
-                    </div>
-                    <Link
-                        href="/login"
-                        className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold py-3 px-6 rounded-xl shadow-md shadow-red-200 hover:shadow-lg active:scale-95 transition-all no-underline"
-                    >
-                        <FiLogIn className="w-4 h-4" />
-                        ورود به حساب کاربری
-                    </Link>
-                </div>
-            </main>
+            <AuthGate
+                icon={FiUser}
+                title="پروفایل کاربری شما"
+                description="برای مشاهده پین‌ها، دنبال‌کنندگان و مدیریت حساب کاربری خود وارد شوید."
+                redirectUrl="/profile"
+            />
         )
     }
 
@@ -120,30 +110,30 @@ export default function ProfilePage() {
                     <div className="relative group">
                         <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-500 to-orange-500 opacity-0 group-hover:opacity-30 blur-lg transition-opacity duration-500" />
                         <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden bg-gradient-to-br from-red-500 via-red-600 to-orange-500 ring-4 ring-white/20 shadow-2xl flex items-center justify-center text-4xl sm:text-5xl font-black text-white transition-all duration-300 group-hover:scale-105 group-hover:ring-white/40 group-hover:shadow-2xl">
-                            {user.avatar ? (
+                            {currentUser.avatar ? (
                                 <img
-                                    src={user.avatar}
-                                    alt={user.name}
+                                    src={currentUser.avatar}
+                                    alt={currentUser.name}
                                     className="w-full h-full object-cover"
                                 />
                             ) : (
                                 <span className="leading-none">
-                                    {user.username?.charAt(0).toUpperCase() || '؟'}
+                                    {currentUser.username?.charAt(0).toUpperCase() || '؟'}
                                 </span>
                             )}
                         </div>
                     </div>
 
                     <h1 className="text-white text-2xl sm:text-3xl font-extrabold tracking-tight mt-5 transition-transform duration-300 hover:scale-[1.02]">
-                        {user.name}
+                        {currentUser.name}
                     </h1>
 
                     <div className="flex flex-col md:flex-row items-center justify-center gap-2.5 mt-3">
                         <span className="flex items-center gap-1 bg-white/10 backdrop-blur-sm text-white/80 text-xs font-medium px-3 py-1.5 rounded-full ring-1 ring-white/10 transition-all duration-200 hover:bg-white/20 hover:scale-105 hover:ring-white/30 cursor-default">
-                            <span>{user.username}</span><FiAtSign className="w-3 h-3" />
+                            <span>{currentUser.username}</span><FiAtSign className="w-3 h-3" />
                         </span>
                         <span className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm text-white/80 text-xs font-medium px-3 py-1.5 rounded-full ring-1 ring-white/10 transition-all duration-200 hover:bg-white/20 hover:scale-105 hover:ring-white/30 cursor-default">
-                            {user.email}<FiMail className="w-3 h-3" />
+                            {currentUser.email}<FiMail className="w-3 h-3" />
                         </span>
                     </div>
                     <div className="mt-6 flex items-center gap-5 sm:gap-7">
@@ -161,7 +151,7 @@ export default function ProfilePage() {
                         <span className="w-1 h-1 rounded-full bg-white/20" />
 
                         <Link
-                            href={`/user/${user.id}/connections?tab=followers`}
+                            href={`/user/${currentUser.id}/connections?tab=followers`}
                             className="group/stat flex flex-col items-center gap-1.5 no-underline"
                         >
                             <div className="flex items-center gap-1.5">
@@ -177,7 +167,7 @@ export default function ProfilePage() {
                         <span className="w-1 h-1 rounded-full bg-white/20" />
 
                         <Link
-                            href={`/user/${user.id}/connections?tab=following`}
+                            href={`/user/${currentUser.id}/connections?tab=following`}
                             className="group/stat flex flex-col items-center gap-1.5 no-underline"
                         >
                             <div className="flex items-center gap-1.5">

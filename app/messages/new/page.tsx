@@ -10,7 +10,9 @@ import { IoSend } from 'react-icons/io5'
 import {
     FiArrowRight,
     FiLoader,
+    FiMessageCircle,
 } from 'react-icons/fi'
+import AuthGate from '@/app/components/AuthGate'
 
 type OtherUser = {
     id: string
@@ -23,7 +25,21 @@ function NewConversationContent() {
     const searchParams = useSearchParams()
     const userId = searchParams.get('userId') || ''
     const router = useRouter()
-    const { user } = useAuthStore()
+    const user = useAuthStore((state) => state.user)
+
+    const { data: meData, isLoading: checkingAuth } = useQuery({
+        queryKey: ['me'],
+        queryFn: async () => {
+            const res = await fetch('/api/auth/me')
+            if (!res.ok) return null
+            const data = await res.json()
+            return data.user
+        },
+        enabled: !user,
+        staleTime: 60 * 1000,
+    })
+
+    const currentUser = user || meData
 
     const [newMessage, setNewMessage] = useState('')
     const [sending, setSending] = useState(false)
@@ -55,7 +71,7 @@ function NewConversationContent() {
             if (!res.ok) return { conversations: [] }
             return res.json()
         },
-        enabled: !!user && !!userId,
+        enabled: !!currentUser && !!userId,
         staleTime: 30 * 1000,
     })
 
@@ -113,14 +129,22 @@ function NewConversationContent() {
     }
 
     // ── حالت‌های لودینگ/خطا ──
-    if (!user) {
+    if (checkingAuth && !currentUser) {
         return (
-            <div className="h-full flex flex-col items-center justify-center gap-4 px-4">
-                <p className="text-gray-500 text-lg">برای مشاهده پیام‌ها وارد شوید</p>
-                <Link href="/login" className="text-red-600 font-bold hover:underline">
-                    ورود
-                </Link>
+            <div className="h-full flex items-center justify-center">
+                <FiLoader className="w-8 h-8 text-red-500 animate-spin" />
             </div>
+        )
+    }
+
+    if (!currentUser) {
+        return (
+            <AuthGate
+                icon={FiMessageCircle}
+                title="ارسال پیام جدید"
+                description="برای شروع گفتگو و ارسال پیام، ابتدا وارد حساب کاربری خود شوید."
+                redirectUrl={`/messages/new?userId=${userId}`}
+            />
         )
     }
 

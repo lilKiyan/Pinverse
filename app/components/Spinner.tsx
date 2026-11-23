@@ -1,12 +1,5 @@
 "use client"
 
-// ═══════════════════════════════════════════════
-// 🎾 اسپینر Gravity Drop — گوی با فیزیک سقوط واقعی
-//    سقوط با شتاب → اسکواش برخورد → مینی‌پرش → بازگشت نرم
-//    + سایه زمین که با ارتفاع گوی هماهنگ نفس می‌کشد
-// ═══════════════════════════════════════════════
-
-// نکته: box ها بلندتر از عرضشون‌ان (فضای سقوط عمودی)
 const SIZES = {
     xs: { box: 'w-4 h-6', ball: 'w-1.5 h-1.5' },
     sm: { box: 'w-6 h-9', ball: 'w-2 h-2' },
@@ -14,16 +7,14 @@ const SIZES = {
     lg: { box: 'w-12 h-20', ball: 'w-4 h-4' },
 } as const
 
-// ✅ الگوی درس ۴ — تایپ از روی خود داده
 type SpinnerSize = keyof typeof SIZES
 
 type SpinnerProps = {
     size?: SpinnerSize
-    label?: string      // متن اختیاری زیر اسپینر
-    className?: string  // برای حالت‌های خاص
+    label?: string    
+    className?: string 
 }
 
-// ── بدنه اسپینر (سایه + گوی سقوط‌کننده) ──
 function SpinnerCore({ s, className }: { s: (typeof SIZES)[SpinnerSize]; className: string }) {
     return (
         <span
@@ -31,10 +22,8 @@ function SpinnerCore({ s, className }: { s: (typeof SIZES)[SpinnerSize]; classNa
             aria-label="در حال بارگذاری"
             className={`relative inline-block gravity-spinner ${s.box} ${className}`}
         >
-            {/* سایه زمین — با ارتفاع گوی بزرگ/کوچیک می‌شود */}
             <span className="gravity-shadow" />
 
-            {/* گوی سقوط‌کننده */}
             <span className="gravity-fall">
                 <span className={`gravity-ball rounded-full bg-gradient-to-br from-red-500 via-rose-500 to-orange-400 ${s.ball}`} />
             </span>
@@ -48,13 +37,11 @@ export default function Spinner({ size = 'md', label, className = '' }: SpinnerP
     return (
         <>
             {label ? (
-                // با متن — ستون وسط‌چین (لودینگ صفحه/بخش)
                 <div className="flex flex-col items-center justify-center gap-2.5">
                     <SpinnerCore s={s} className={className} />
                     <span className="text-xs text-gray-400 font-medium">{label}</span>
                 </div>
             ) : (
-                // فقط اسپینر — برای داخل دکمه‌ها و جای‌های خطی
                 <SpinnerCore s={s} className={className} />
             )}
 

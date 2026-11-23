@@ -33,7 +33,6 @@ const SkeletonUserCard = () => (
     </div>
 )
 
-// ✅ تغییر ۱: این دیگه export default نیست
 function SearchContent() {
     const searchParams = useSearchParams()
     const q = searchParams.get('q') || ''
@@ -44,7 +43,6 @@ function SearchContent() {
 
     const hasQuery = q.trim().length > 0
 
-    // ── Query ۱: پین‌ها ──
     const {
         data: pins = [],
         isLoading: loadingPins,
@@ -61,7 +59,6 @@ function SearchContent() {
         staleTime: 2 * 60 * 1000,
     })
 
-    // ── Query ۲: کاربران ──
     const {
         data: users = [],
         isLoading: loadingUsers,
@@ -78,7 +75,6 @@ function SearchContent() {
         staleTime: 2 * 60 * 1000,
     })
 
-    // ── Mutation: فالو/آنفالو (با Optimistic Update) ──
     const followMutation = useMutation({
         mutationFn: async (userId: string) => {
             const res = await fetch(`/api/users/${userId}/follow`, { method: 'POST' })
@@ -139,12 +135,10 @@ function SearchContent() {
             dir="rtl"
             className="relative min-h-screen mb-12 overflow-hidden bg-gradient-to-br from-gray-50 via-white to-red-50/40 py-8 px-4"
         >
-            {/* تزئینی پس‌زمینه */}
             <div className="absolute -top-24 -left-24 w-96 h-96 bg-red-100/50 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-32 -right-32 w-[28rem] h-[28rem] bg-orange-100/40 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative mx-auto px-3 max-w-6xl">
-                {/* ═══ سربرگ ═══ */}
                 <div className="mb-8">
                     <p className="text-xs font-semibold text-gray-400 mb-2 flex items-center gap-1.5">
                         <FiSearch className="w-3.5 h-3.5" />
@@ -174,7 +168,6 @@ function SearchContent() {
                     )}
                 </div>
 
-                {/* ═══ تب‌ها ═══ */}
                 {hasQuery && (
                     <div className="inline-flex items-center gap-2 bg-gray-100 rounded-full p-1 mb-8">
                         <button
@@ -215,7 +208,6 @@ function SearchContent() {
                     </div>
                 )}
 
-                {/* ═══ نتایج ═══ */}
                 {!hasQuery ? (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <div className="w-20 h-20 rounded-3xl bg-white shadow-lg ring-1 ring-black/5 flex items-center justify-center mb-4 rotate-3">

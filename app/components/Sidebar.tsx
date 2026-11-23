@@ -52,7 +52,6 @@ const Sidebar = () => {
                 {navItems.map((item) => {
                     const active = isPathActive(pathname, item.href)
                     const Icon = item.icon
-                    // ✅ بج پیام‌ها
                     const showMessageBadge = item.href === '/messages' && unreadCount > 0
                     const showNotificationBadge = item.href === '/updates' && notificationCount > 0
                     const showBadge = item.href === '/messages' && unreadCount > 0

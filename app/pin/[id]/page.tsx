@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/authStore'
 import Link from 'next/link'
@@ -12,6 +13,8 @@ import PinDetailSkeleton from '@/app/components/skeletons/PinDetailSkeleton'
 import { getCategoryIcon } from '@/lib/categories'
 
 const SharePinModal = dynamic(() => import('@/app/components/SharePinModal'), { ssr: false })
+const EditPinModal = dynamic(() => import('@/app/components/EditPinModal'), { ssr: false })
+const CreateEditBoardModal = dynamic(() => import('@/app/components/CreateEditBoardModal'), { ssr: false })
 const PinCard = dynamic(() => import('@/app/components/PinCard'), {
     ssr: false,
     loading: () => (
@@ -47,11 +50,13 @@ import {
     FiUserPlus,
     FiCheckCircle,
     FiGrid,
+    FiEdit2,
     FiX,
     FiLogIn,
     FiMessageCircle,
     FiDownload,
     FiLoader,
+    FiPlus,
 } from 'react-icons/fi'
 
 type SavedBoard = { boardId: string; boardName: string }
@@ -94,8 +99,24 @@ export default function PinDetailPage() {
 
     const [saveOpen, setSaveOpen] = useState(false)
     const [toast, setToast] = useState('')
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [isCreateBoardModalOpen, setIsCreateBoardModalOpen] = useState(false)
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
 
     const [loginAction, setLoginAction] = useState<LoginAction>(null)
+
+    useEffect(() => {
+        if (!loginAction) return
+        const prevOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prevOverflow
+        }
+    }, [loginAction])
     const [isDownloading, setIsDownloading] = useState(false)
     const [isShareModalOpen, setIsShareModalOpen] = useState(false)
 
@@ -468,13 +489,14 @@ export default function PinDetailPage() {
                                 </Link>
 
                                 {pin.isOwner ? (
-                                    <Link
-                                        href={`/settings`}
-                                        className="shrink-0 text-xs bg-gray-100 hover:bg-gray-200 px-3.5 py-1.5 rounded-full font-semibold transition-all no-underline flex items-center gap-1.5 text-gray-700"
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditModalOpen(true)}
+                                        className="shrink-0 text-xs bg-gray-100 hover:bg-gray-200 px-3.5 py-1.5 rounded-full font-semibold transition-all flex items-center gap-1.5 text-gray-700 cursor-pointer"
                                     >
-                                        <FiGrid className="w-3.5 h-3.5" />
-                                        ویرایش
-                                    </Link>
+                                        <FiEdit2 className="w-3.5 h-3.5" />
+                                        ویرایش پین
+                                    </button>
                                 ) : (
                                     <button
                                         onClick={handleFollow}
@@ -661,12 +683,16 @@ export default function PinDetailPage() {
                                                     <FiFolder className="w-5 h-5 text-red-300" />
                                                 </div>
                                                 <p className="text-xs text-gray-500 mb-2.5 font-medium">بردی ندارید. ابتدا یک برد بسازید.</p>
-                                                <Link
-                                                    href="/myboards?tab=boards"
-                                                    className="inline-block bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold hover:bg-red-700 transition-all no-underline"
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSaveOpen(false)
+                                                        setIsCreateBoardModalOpen(true)
+                                                    }}
+                                                    className="inline-block bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-semibold hover:bg-red-700 transition-all cursor-pointer"
                                                 >
                                                     ساخت برد
-                                                </Link>
+                                                </button>
                                             </div>
                                         ) : (
                                             <div className="space-y-0.5">
@@ -696,6 +722,20 @@ export default function PinDetailPage() {
                                                         </button>
                                                     )
                                                 })}
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSaveOpen(false)
+                                                        setIsCreateBoardModalOpen(true)
+                                                    }}
+                                                    className="w-full mt-2 pt-2 border-t border-gray-100 flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-gray-700 hover:text-red-600 hover:bg-red-50/50 transition-all font-bold text-xs cursor-pointer text-right"
+                                                >
+                                                    <span className="w-7 h-7 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+                                                        <FiPlus className="w-3.5 h-3.5" />
+                                                    </span>
+                                                    <span>ساخت برد جدید</span>
+                                                </button>
                                             </div>
                                         )}
                                     </div>
@@ -732,12 +772,21 @@ export default function PinDetailPage() {
             )}
 
             {/* ✅ مودال هوشمند برای اکشن‌های محافظت‌شده */}
-            {loginAction && (() => {
+            {mounted && loginAction && (() => {
                 const config = ACTION_CONFIG[loginAction]
                 const ActionIcon = config.icon
-                return (
-                    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
-                        <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-[fadeInUp_0.3s_ease-out]">
+                return createPortal(
+                    <div
+                        className="fixed inset-0 z-[99999] w-screen h-screen min-h-dvh flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto animate-[fadeIn_0.2s_ease-out]"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) setLoginAction(null)
+                        }}
+                    >
+                        <div
+                            dir="rtl"
+                            className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl overflow-hidden animate-[scaleUp_0.2s_ease-out] my-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
 
                             {/* نوار رنگی بالای مودال (بر اساس اکشن) */}
                             <div className={`h-1.5 w-full bg-gradient-to-r ${config.gradient}`} />
@@ -745,7 +794,7 @@ export default function PinDetailPage() {
                             {/* دکمه بستن */}
                             <button
                                 onClick={() => setLoginAction(null)}
-                                className="absolute top-5 right-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors cursor-pointer"
+                                className="absolute top-5 left-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors cursor-pointer"
                                 aria-label="بستن"
                             >
                                 <FiX className="w-4 h-4" />
@@ -783,7 +832,8 @@ export default function PinDetailPage() {
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )
             })()}
 
@@ -802,6 +852,37 @@ export default function PinDetailPage() {
                     pinTitle={pin.title}
                     pinImageUrl={pin.imageUrl}
                     onClose={() => setIsShareModalOpen(false)}
+                />
+            )}
+
+            {isEditModalOpen && (
+                <EditPinModal
+                    pinId={pin.id}
+                    initialTitle={pin.title}
+                    initialDescription={pin.description ?? undefined}
+                    initialCategory={pin.category?.slug ?? undefined}
+                    onClose={() => setIsEditModalOpen(false)}
+                    onSuccess={() => {
+                        queryClient.invalidateQueries({ queryKey: ['pin', id] })
+                        setToast('مشخصات پین با موفقیت ذخیره شد')
+                        setTimeout(() => setToast(''), 3000)
+                    }}
+                />
+            )}
+
+            {isCreateBoardModalOpen && (
+                <CreateEditBoardModal
+                    editingBoard={null}
+                    onClose={() => setIsCreateBoardModalOpen(false)}
+                    onSave={async (newBoard) => {
+                        setIsCreateBoardModalOpen(false)
+                        queryClient.invalidateQueries({ queryKey: ['boards'] })
+                        if (newBoard?.id) {
+                            await handleToggleBoard(newBoard.id, newBoard.name)
+                            setToast(`پین در برد «${newBoard.name}» ذخیره شد`)
+                            setTimeout(() => setToast(''), 3000)
+                        }
+                    }}
                 />
             )}
 

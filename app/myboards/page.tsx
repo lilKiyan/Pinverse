@@ -22,6 +22,7 @@ import {
 import type { PinDTO } from '../types/pin'
 import type { Board as BoardDTO } from '../types/board'
 import { useAuthStore } from '@/lib/authStore'
+import AuthGate from '../components/AuthGate'
 
 const CreateEditBoardModal = dynamic(() => import('../components/CreateEditBoardModal'), { ssr: false })
 const DeleteBoardModal = dynamic(() => import('../components/DeleteBoardModal'), { ssr: false })
@@ -192,40 +193,12 @@ export default function MyBoardsPage() {
 
     if (!currentUser) {
         return (
-            <main
-                dir="rtl"
-                className="relative min-h-[82vh] flex flex-col items-center justify-center px-4 overflow-hidden bg-[#FAFAFB] pb-24 lg:pb-8"
-            >
-                <div className="pointer-events-none absolute -top-24 right-1/3 h-80 w-80 rounded-full bg-rose-200/35 blur-3xl" />
-                <div className="relative z-10 w-full max-w-sm rounded-3xl bg-white/95 backdrop-blur-xl p-7 text-center shadow-xl shadow-gray-200/60 ring-1 ring-gray-200/70 space-y-5 animate-[fadeInUp_0.3s_ease-out]">
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/25">
-                        <FiFolder className="h-6 w-6" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <h2 className="text-base sm:text-lg font-extrabold text-gray-900">
-                            کتابخانه و بردهای شما
-                        </h2>
-                        <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">
-                            برای مشاهده و مدیریت پین‌ها، ذخیره‌ها و بردهای شخصی خود وارد شوید.
-                        </p>
-                    </div>
-                    <div className="flex flex-col gap-2 pt-1">
-                        <Link
-                            href="/login"
-                            className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 py-3 px-5 text-xs sm:text-sm font-bold text-white shadow-md shadow-red-500/20 hover:brightness-105 active:scale-[0.98] transition-all no-underline"
-                        >
-                            <FiLogIn className="h-4 w-4" />
-                            ورود به حساب کاربری
-                        </Link>
-                        <Link
-                            href="/"
-                            className="w-full py-2 text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors no-underline"
-                        >
-                            بازگشت به صفحه اصلی
-                        </Link>
-                    </div>
-                </div>
-            </main>
+            <AuthGate
+                icon={FiFolder}
+                title="کتابخانه و بردهای شما"
+                description="برای مشاهده و مدیریت پین‌ها، ذخیره‌ها و بردهای شخصی خود وارد شوید."
+                redirectUrl="/myboards"
+            />
         )
     }
 

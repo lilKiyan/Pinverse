@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { useAuthStore } from '@/lib/authStore'
 import { CONTENT_LIMITS } from '@/lib/validations'
@@ -29,6 +30,21 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
 
     const [commentToDelete, setCommentToDelete] = useState<CommentDTO | null>(null)
     const [isModalClosing, setIsModalClosing] = useState(false)
+    const [isDeletingComment, setIsDeletingComment] = useState(false)
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        setMounted(true)
+    }, [])
+
+    useEffect(() => {
+        if (!commentToDelete) return
+        const prevOverflow = document.body.style.overflow
+        document.body.style.overflow = 'hidden'
+        return () => {
+            document.body.style.overflow = prevOverflow
+        }
+    }, [commentToDelete])
 
     const commentLength = newComment.length
     const isOverLimit = commentLength > CONTENT_LIMITS.COMMENT
@@ -125,14 +141,18 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
     }
 
     const confirmDeleteComment = async () => {
-        if (!commentToDelete) return
-        await handleDeleteComment(commentToDelete.id)
-        closeDeleteCommentModal()
+        if (!commentToDelete || isDeletingComment) return
+        setIsDeletingComment(true)
+        try {
+            await handleDeleteComment(commentToDelete.id)
+            closeDeleteCommentModal()
+        } finally {
+            setIsDeletingComment(false)
+        }
     }
 
     return (
         <div className="px-4 sm:px-5 py-3 flex flex-col gap-3">
-            {/* هدر */}
             <div className="flex items-center gap-2">
                 <div className="w-7 h-7 rounded-lg bg-gray-50 ring-1 ring-gray-100 flex items-center justify-center shrink-0">
                     <FiMessageCircle className="w-3.5 h-3.5 text-gray-500" />
@@ -144,7 +164,6 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                 <div className="flex-1 h-px bg-gradient-to-l from-gray-100 to-transparent" />
             </div>
 
-            {/* لیست کامنت‌ها */}
             {loadingComments ? (
                 <div className="flex justify-center py-6">
                     <Spinner size="sm" />
@@ -236,7 +255,6 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                 </div>
             )}
 
-            {/* فرم افزودن دیدگاه */}
             <div className="flex items-start gap-2.5 mt-0.5">
                 <div className="w-8 h-8 shrink-0 rounded-full overflow-hidden bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white text-xs font-bold ring-2 ring-white shadow-sm shadow-red-100">
                     {user?.avatar ? (
@@ -266,7 +284,6 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                         />
 
                         <div className="absolute left-1 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                            {/* پیل شمارنده */}
                             {newComment.length > 0 && (
                                 <span
                                     className={`inline-flex items-center gap-0.5 h-5 px-1.5 rounded-full text-[9px] font-bold tabular-nums transition-all duration-200 ${isOverLimit
@@ -297,7 +314,6 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                         </div>
                     </form>
 
-                    {/* پیام خطا */}
                     {isOverLimit && (
                         <div className="mt-1.5 mr-2 flex items-center gap-1.5 text-[11px] text-red-500 font-medium animate-[slideDown_0.2s_ease-out]">
                             <FiAlertCircle className="w-3.5 h-3.5 shrink-0" />
@@ -307,7 +323,6 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                         </div>
                     )}
 
-                    {/* خطای سرور */}
                     {commentError && !isOverLimit && (
                         <p className="mt-1.5 mr-2 text-[11px] text-red-500 font-medium">
                             {commentError}
@@ -316,40 +331,61 @@ export default function PinComments({ pinId, onRequireLogin }: PinCommentsProps)
                 </div>
             </div>
 
-            {/* مودال تأیید حذف */}
-            {commentToDelete && (
+            {mounted && commentToDelete && createPortal(
                 <div
-                    className={`fixed inset-0 z-[150] flex items-center justify-center p-4 ${isModalClosing
+                    className={`fixed inset-0 z-[99999] w-screen h-screen min-h-dvh flex items-center justify-center p-4 overflow-y-auto ${isModalClosing
                         ? 'animate-[fadeOut_0.2s_ease-in]'
                         : 'animate-[fadeIn_0.2s_ease-out]'
                         }`}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) closeDeleteCommentModal()
+                    }}
                 >
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={closeDeleteCommentModal} />
+                    <div
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm pointer-events-none"
+                    />
 
-                    <div className="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-[285px] md:max-w-sm text-center">
+                    <div
+                        dir="rtl"
+                        className="relative z-10 bg-white rounded-3xl shadow-2xl p-6 w-full max-w-[320px] sm:max-w-sm text-center animate-[scaleUp_0.2s_ease-out] my-auto"
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <div className="w-14 h-14 mx-auto mb-4 bg-red-50 rounded-2xl flex items-center justify-center">
                             <FiTrash2 className="text-red-600 text-xl" />
                         </div>
-                        <h3 className="text-md md:text-lg font-bold text-gray-900 mb-1.5">حذف دیدگاه</h3>
-                        <p className="text-gray-500 text-xs md:text-sm leading-relaxed mb-6">
+                        <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1.5">
+                            حذف دیدگاه
+                        </h3>
+                        <p className="text-gray-500 text-xs sm:text-sm leading-relaxed mb-6">
                             آیا مطمئن هستید که می‌خواهید این دیدگاه را حذف کنید؟ این عمل قابل بازگشت نیست.
                         </p>
                         <div className="flex gap-2.5">
                             <button
+                                type="button"
+                                onClick={confirmDeleteComment}
+                                disabled={isDeletingComment}
+                                className="flex-1 h-11 bg-red-600 hover:bg-red-700 active:scale-[0.99] text-white rounded-xl font-bold text-sm transition-all cursor-pointer shadow-md shadow-red-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                {isDeletingComment ? (
+                                    <>
+                                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                                        <span>در حال حذف...</span>
+                                    </>
+                                ) : (
+                                    <span>حذف</span>
+                                )}
+                            </button>
+                            <button
+                                type="button"
                                 onClick={closeDeleteCommentModal}
                                 className="flex-1 h-11 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-semibold text-sm transition-colors cursor-pointer"
                             >
                                 انصراف
                             </button>
-                            <button
-                                onClick={confirmDeleteComment}
-                                className="flex-1 h-11 bg-red-600 hover:bg-red-700 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
-                            >
-                                حذف
-                            </button>
                         </div>
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
 
             <style>{`

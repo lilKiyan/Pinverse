@@ -16,7 +16,7 @@ type SaveToBoardDropdownProps = {
     boards: Board[]
     savedBoards?: SavedBoardInfo[]
     onToggleSave: (board: Board) => void
-    onCreateBoard: (name: string) => void
+    onCreateBoard: (initialName?: string) => void
     isLoadingBoards: boolean
     onOpenChange?: (isOpen: boolean) => void
 }
@@ -65,7 +65,6 @@ const SaveToBoardDropdown = ({
         else openDropdown()
     }
 
-    // کلیک بیرون → بستن (کلیک + لمس)
     useEffect(() => {
         if (!isOpen) return
 
@@ -84,7 +83,6 @@ const SaveToBoardDropdown = ({
         }
     }, [isOpen])
 
-    // اسکرول → بستن
     useEffect(() => {
         if (!isOpen) return
 
@@ -94,7 +92,6 @@ const SaveToBoardDropdown = ({
         return () => window.removeEventListener('scroll', handleScroll, true)
     }, [isOpen])
 
-    // محاسبه align (چپ/راست) — فقط دسکتاپ
     useEffect(() => {
         if (!isOpen || !pillWrapperRef.current) return
         const rect = pillWrapperRef.current.getBoundingClientRect()
@@ -119,7 +116,6 @@ const SaveToBoardDropdown = ({
         const wasSaved = savedBoardIds.has(board.id)
         onToggleSave(board)
 
-        // ✨ انیمیشن تأیید: تیک روی برد تازه تغییر وضعیت‌یافته می‌پرد
         if (!wasSaved) {
             setJustToggledId(board.id)
             setTimeout(() => setJustToggledId(null), 600)
@@ -127,10 +123,10 @@ const SaveToBoardDropdown = ({
     }
 
     const handleCreateBoard = () => {
-        if (!query.trim()) return
-        onCreateBoard(query.trim())
+        const initialName = query.trim()
         setQuery('')
         closeDropdown()
+        onCreateBoard(initialName)
     }
 
     const savedBoardIds = new Set(savedBoards.map((sb) => sb.boardId))
@@ -149,7 +145,6 @@ const SaveToBoardDropdown = ({
                         : 'hover:bg-gray-50 active:scale-[0.98]'
                     }`}
             >
-                {/* کاور برد */}
                 <div className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gray-100
                     ring-1 ring-black/5 transition-all duration-300
                     group-hover/board:ring-red-200 group-hover/board:scale-[1.05]">
@@ -162,13 +157,11 @@ const SaveToBoardDropdown = ({
                     />
                 </div>
 
-                {/* نام برد */}
                 <span className={`font-bold text-sm truncate flex-1 transition-colors
                     ${isSaved ? 'text-red-700' : 'text-gray-900 group-hover/board:text-gray-700'}`}>
                     {board.name}
                 </span>
 
-                {/* تیک — با انیمیشن ورود فنری */}
                 <span
                     className={`relative w-6 h-6 shrink-0 rounded-full flex items-center justify-center transition-all duration-300
                         ${isSaved
@@ -188,7 +181,6 @@ const SaveToBoardDropdown = ({
             className="absolute top-3 left-3 right-3 hidden md:flex items-center justify-between gap-2"
         >
             <div className="relative" ref={pillWrapperRef}>
-                {/* ═══ دکمه تریگر ═══ */}
                 <button
                     onClick={toggleDropdown}
                     className={`group flex items-center gap-1.5 h-[38px] pl-3 pr-2.5 rounded-xl backdrop-blur-md text-white text-sm font-semibold shadow-lg transition-all duration-200 cursor-pointer pointer-events-auto
@@ -199,7 +191,7 @@ const SaveToBoardDropdown = ({
                 >
                     <FiBookmark className={`w-4 h-4 shrink-0 transition-all duration-300
                         ${isOpenVisible ? 'text-red-400 fill-red-400 scale-110' : 'text-white/80 group-hover:scale-110'}`} />
-                    <span className="truncate max-w-[120px]">
+                    <span className="truncate text-xs max-w-[120px]">
                         {savedBoards.length === 0
                             ? 'ذخیره'
                             : savedBoards.length === 1
@@ -211,7 +203,6 @@ const SaveToBoardDropdown = ({
                     />
                 </button>
 
-                {/* ═══ پاپ‌آپ ═══ */}
                 {isOpen && (
                     <div
                         className={`absolute top-[calc(100%+10px)] ${align === 'left' ? 'left-0' : 'right-0'
@@ -223,9 +214,7 @@ const SaveToBoardDropdown = ({
                                 : 'opacity-0 scale-95 -translate-y-2'
                             }`}
                     >
-                        {/* ═══ هدر ═══ */}
                         <div className="relative px-4 pt-4 pb-3 shrink-0">
-                            {/* دستگیره drag موبایل */}
                             <div className="sm:hidden flex justify-center mb-2.5">
                                 <div className="w-9 h-1 rounded-full bg-gray-200" />
                             </div>
@@ -249,7 +238,6 @@ const SaveToBoardDropdown = ({
                             </div>
                         </div>
 
-                        {/* ═══ لیست بردها ═══ */}
                         <div className="flex-1 overflow-y-auto px-2.5 pb-2 scroll-smooth
                             [&::-webkit-scrollbar]:w-1.5
                             [&::-webkit-scrollbar-thumb]:bg-gray-200
@@ -281,7 +269,6 @@ const SaveToBoardDropdown = ({
                             )}
                         </div>
 
-                        {/* ═══ ساخت برد جدید ═══ */}
                         <button
                             onClick={handleCreateBoard}
                             className="shrink-0 group flex items-center gap-3 px-4 py-3.5 border-t border-gray-100

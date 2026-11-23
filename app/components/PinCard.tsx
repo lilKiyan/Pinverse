@@ -37,6 +37,7 @@ const PinOptionsMenu = dynamic(() => import('./PinOptionsMenu'), {
 
 const DeletePinModal = dynamic(() => import('./DeletePinModal'), { ssr: false })
 const EditPinModal = dynamic(() => import('./EditPinModal'), { ssr: false })
+const CreateEditBoardModal = dynamic(() => import('./CreateEditBoardModal'), { ssr: false })
 
 type PinCardProps = {
     pin: PinDTO
@@ -74,6 +75,8 @@ const PinCard = memo(({
 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+    const [isCreateBoardModalOpen, setIsCreateBoardModalOpen] = useState(false)
+    const [newBoardInitialName, setNewBoardInitialName] = useState('')
     const [showDeletedToast, setShowDeletedToast] = useState(false)
     const [showReportToast, setShowReportToast] = useState(false)
     const [isSaveMenuOpen, setIsSaveMenuOpen] = useState(false)
@@ -115,9 +118,10 @@ const PinCard = memo(({
         },
     })
 
-    const handleCreateBoard = useCallback((name: string) => {
-        createBoardMutation.mutate(name)
-    }, [createBoardMutation])
+    const handleCreateBoard = useCallback((initialName?: string) => {
+        setNewBoardInitialName(initialName || '')
+        setIsCreateBoardModalOpen(true)
+    }, [])
 
     const saveMutation = useMutation({
         mutationFn: async ({ pinId, boardId, action }: SaveMutationVariables): Promise<unknown> => {
@@ -196,7 +200,6 @@ const PinCard = memo(({
 
             URL.revokeObjectURL(blobUrl)
         } catch {
-            // فال‌بک در صورت محدودیت CORS مرورگر
             try {
                 const link = document.createElement('a')
                 link.href = pin.imageUrl
@@ -406,6 +409,7 @@ const PinCard = memo(({
                     pinId={pin.id}
                     initialTitle={pin.title}
                     initialDescription={pin.description ?? undefined}
+                    initialCategory={pin.category?.slug ?? undefined}
                     onClose={() => setIsEditModalOpen(false)}
                 />
             )}
@@ -418,6 +422,26 @@ const PinCard = memo(({
                         setShowDeletedToast(true)
                         if (onDeletePin) onDeletePin(id)
                         setTimeout(() => setShowDeletedToast(false), 2000)
+                    }}
+                />
+            )}
+
+            {isCreateBoardModalOpen && (
+                <CreateEditBoardModal
+                    editingBoard={null}
+                    initialName={newBoardInitialName}
+                    onClose={() => setIsCreateBoardModalOpen(false)}
+                    onSave={(newBoard) => {
+                        setIsCreateBoardModalOpen(false)
+                        queryClient.invalidateQueries({ queryKey: ['boards'] })
+                        if (newBoard?.id) {
+                            saveMutation.mutate({
+                                pinId: pin.id,
+                                boardId: newBoard.id,
+                                action: 'save',
+                                boardName: newBoard.name,
+                            })
+                        }
                     }}
                 />
             )}

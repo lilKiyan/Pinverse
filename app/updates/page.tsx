@@ -4,7 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useInfiniteQuery, useMutation, useQueryClient, useQuery, type InfiniteData } from '@tanstack/react-query'
 import NotificationItem from '@/app/components/NotificationItem'
+import NotificationSkeleton from '@/app/components/skeletons/NotificationSkeleton'
 import Spinner from '@/app/components/Spinner'
+import AuthGate from '@/app/components/AuthGate'
 import { FiBell, FiCheck, FiInbox, FiLogIn } from 'react-icons/fi'
 import { useAuthStore } from '@/lib/authStore'
 import type { NotificationDTO } from '@/app/components/NotificationItem'
@@ -35,7 +37,6 @@ export default function UpdatesPage() {
 
     const currentUser = user || meData
 
-    // ── Query: لیست نوتیف‌ها با cursor pagination ──
     const {
         data,
         fetchNextPage,
@@ -58,7 +59,6 @@ export default function UpdatesPage() {
         staleTime: 30 * 1000,
     })
 
-    // ── Mutation: toggle تک‌نوتیف ──
     const toggleReadMutation = useMutation({
         mutationFn: async (id: string) => {
             const res = await fetch('/api/notifications/read', {
@@ -76,12 +76,10 @@ export default function UpdatesPage() {
             )
         },
         onError: () => {
-            // rollback — برگرد به حقیقت سرور
             queryClient.invalidateQueries({ queryKey: ['notifications'] })
         },
     })
 
-    // ── Mutation: خواندن همه ──
     const markAllMutation = useMutation({
         mutationFn: async () => {
             const res = await fetch('/api/notifications/read', {
@@ -103,7 +101,6 @@ export default function UpdatesPage() {
         },
     })
 
-    // ── Mutation: حذف نوتیف (Optimistic) ──
     const deleteMutation = useMutation({
         mutationFn: async (id: string) => {
             const res = await fetch(`/api/notifications/${id}`, { method: 'DELETE' })
@@ -131,18 +128,15 @@ export default function UpdatesPage() {
 
     const notifications = data?.pages.flatMap((p) => p.notifications) ?? []
 
-    // فیلتر نخونده‌ها
     const filtered = filter === 'all'
         ? notifications
         : notifications.filter((n) => !n.isRead)
 
     const unreadCount = notifications.filter((n) => !n.isRead).length
 
-    // ── toggle خوانده/نخوانده تک‌نوتیف (Optimistic) ──
     const handleToggleRead = (notification: NotificationDTO) => {
         const newIsRead = !notification.isRead
 
-        // ۱. UI فوری
         queryClient.setQueryData<NotificationsCache>(['notifications'], (old) => {
             if (!old) return old
             return {
@@ -156,7 +150,6 @@ export default function UpdatesPage() {
             }
         })
 
-        // ۲. بج هم فوری
         toggleReadMutation.mutate(notification.id)
     }
 
@@ -165,7 +158,6 @@ export default function UpdatesPage() {
     }
 
     const handleMarkAllRead = () => {
-        // UI فوری
         queryClient.setQueryData<NotificationsCache>(['notifications'], (old) => {
             if (!old) return old
             return {
@@ -182,42 +174,24 @@ export default function UpdatesPage() {
 
     if (!checkingAuth && !currentUser) {
         return (
-            <main className="min-h-[70vh] flex flex-col items-center justify-center text-center px-4 pb-24 lg:pb-8">
-                <div className="max-w-sm w-full bg-white rounded-3xl p-8 shadow-xl shadow-red-100/30 ring-1 ring-black/5 flex flex-col items-center text-center space-y-4 animate-[fadeIn_0.3s_ease-out]">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-red-200">
-                        <FiBell className="w-7 h-7" />
-                    </div>
-                    <div className="space-y-1.5">
-                        <h2 className="text-xl font-bold text-gray-900">اعلان‌های شما</h2>
-                        <p className="text-gray-500 text-sm">برای مشاهده تعاملات، لایک‌ها و پیام‌ها وارد شوید.</p>
-                    </div>
-                    <Link
-                        href="/login"
-                        className="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-600 to-rose-600 text-white font-bold py-3 px-6 rounded-xl shadow-md shadow-red-200 hover:shadow-lg active:scale-95 transition-all no-underline"
-                    >
-                        <FiLogIn className="w-4 h-4" />
-                        ورود به حساب کاربری
-                    </Link>
-                </div>
-            </main>
+            <AuthGate
+                icon={FiBell}
+                title="اعلان‌های شما"
+                description="برای مشاهده تعاملات، لایک‌ها و پیام‌ها وارد شوید."
+                redirectUrl="/updates"
+            />
         )
     }
 
     if (isLoading) {
-        return (
-            <main className="min-h-[70vh] flex items-center justify-center">
-                <Spinner size="lg" />
-            </main>
-        )
+        return <NotificationSkeleton />
     }
 
     return (
         <main dir="rtl" className="relative min-h-screen bg-gradient-to-b from-gray-50 to-white pb-24 lg:pb-10">
-            {/* بلاب تزئینی */}
             <div className="absolute -top-24 -right-24 w-80 h-80 bg-red-100/50 rounded-full blur-3xl pointer-events-none" />
 
             <div className="relative max-w-6xl mx-auto px-4 py-8">
-                {/* ═══ هدر ═══ */}
                 <div className="flex items-center justify-between mb-6">
                     <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 shadow-lg shadow-red-200 flex items-center justify-center">
@@ -235,7 +209,6 @@ export default function UpdatesPage() {
                         </div>
                     </div>
 
-                    {/* دکمه خواندن همه */}
                     {unreadCount > 0 && (
                         <button
                             onClick={handleMarkAllRead}
@@ -248,7 +221,6 @@ export default function UpdatesPage() {
                     )}
                 </div>
 
-                {/* ═══ تب‌ها ═══ */}
                 <div className="inline-flex items-center gap-1 bg-gray-100 rounded-full p-1 mb-6">
                     <button
                         onClick={() => setFilter('all')}
@@ -270,7 +242,6 @@ export default function UpdatesPage() {
                     </button>
                 </div>
 
-                {/* ═══ لیست ═══ */}
                 {filtered.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-24 text-center">
                         <div className="w-16 h-16 rounded-3xl bg-gradient-to-br from-gray-50 to-gray-100 ring-1 ring-gray-100 flex items-center justify-center rotate-3 mb-4">
@@ -301,7 +272,6 @@ export default function UpdatesPage() {
                     </div>
                 )}
 
-                {/* بارگذاری بیشتر */}
                 {hasNextPage && filtered.length > 0 && (
                     <div className="flex justify-center mt-6">
                         <button

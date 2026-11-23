@@ -373,11 +373,9 @@ const Navbar = () => {
             </div>
           </form>
 
-          {/* ═══ باکس پیشنهادهای زنده ═══ */}
           {showSuggestionBox && (
             <div className="absolute top-[calc(100%+8px)] right-0 w-[min(520px,calc(100vw-2rem))] bg-white rounded-2xl shadow-2xl shadow-black/10 ring-1 ring-black/5 overflow-hidden z-50 animate-[fadeInDown_0.18s_ease-out]">
 
-              {/* حالت لودینگ */}
               {isSearching && !hasResults ? (
                 <div className="py-3 space-y-1">
                   <div className="px-4 pt-2 pb-1.5">
@@ -410,7 +408,6 @@ const Navbar = () => {
                   [&::-webkit-scrollbar-thumb]:rounded-full
                   [&::-webkit-scrollbar-track]:bg-transparent">
 
-                  {/* ── سکشن کاربران ── */}
                   {userSuggestions.length > 0 && (
                     <div className="pt-2">
                       <div className="flex items-center gap-2 px-4 pb-1.5">
@@ -478,7 +475,6 @@ const Navbar = () => {
                     </div>
                   )}
 
-                  {/* ── سکشن پین‌ها ── */}
                   {pinSuggestions.length > 0 && (
                     <div className={`pt-2 ${userSuggestions.length > 0 ? 'border-t border-gray-100' : ''}`}>
                       <div className="flex items-center gap-2 px-4 pb-1.5">
@@ -553,7 +549,6 @@ const Navbar = () => {
                 </div>
               ) : null}
 
-              {/* فوتر */}
               <button
                 onClick={goToFullSearch}
                 className="w-full flex items-center justify-between px-4 py-4 border-t border-gray-100 bg-gradient-to-l from-gray-50/60 to-transparent hover:from-red-50/70 transition-all cursor-pointer group"
@@ -570,7 +565,6 @@ const Navbar = () => {
         <div className="flex items-center gap-1.5">
           <div className="w-px h-6 bg-gray-200 mx-1 hidden sm:block" />
 
-          {/* ═══ پروفایل ═══ */}
           <div className="relative" ref={profileRef}>
             <div className="flex items-center gap-0.5 pl-1 pr-0.5 py-0.5 rounded-full hover:bg-gray-100 transition-colors duration-200">
               <button
@@ -700,7 +694,6 @@ const Navbar = () => {
         </div>
       </div>
 
-      {/* ردیف بردها */}
       {boards.length > 0 && (
         <div
           ref={boardsScrollRef}
