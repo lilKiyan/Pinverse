@@ -35,10 +35,16 @@ export async function getCurrentUser() {
                 avatar: true,
                 bio: true,
                 unreadNotifications: true,
+                banned: true,
             },
         })
 
-        return user
+        if (!user || user.banned) {
+            return null
+        }
+
+        const { banned, ...cleanUser } = user
+        return cleanUser
     } catch (error) {
         console.error('getCurrentUser error:', error)
         return null  // ✅ به جای کرش، null برگردون

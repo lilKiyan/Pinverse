@@ -133,9 +133,26 @@ export async function POST(request: Request) {
         const body = await request.json()
         const { title, description, imageUrl, imageWidth, imageHeight, boardId, category } = body   // ✅ category اضافه
 
-        if (!title || !imageUrl) {
+        if (!title || !imageUrl || typeof imageUrl !== 'string') {
             return NextResponse.json(
                 { error: 'عنوان و تصویر الزامی است' },
+                { status: 400 }
+            )
+        }
+
+        // بررسی اعتبار امنیتی آدرس تصویر
+        try {
+            const parsedUrl = new URL(imageUrl)
+            const allowedHostnames = ['res.cloudinary.com', 'images.unsplash.com']
+            if (parsedUrl.protocol !== 'https:' || !allowedHostnames.some((h) => parsedUrl.hostname === h || parsedUrl.hostname.endsWith(`.${h}`))) {
+                return NextResponse.json(
+                    { error: 'آدرس تصویر نامعتبر است. تصویر باید از دامنه‌های معتبر بارگذاری شود.' },
+                    { status: 400 }
+                )
+            }
+        } catch {
+            return NextResponse.json(
+                { error: 'فرمت آدرس تصویر نامعتبر است' },
                 { status: 400 }
             )
         }

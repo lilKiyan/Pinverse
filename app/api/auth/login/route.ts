@@ -41,6 +41,13 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'ایمیل یا رمز عبور اشتباه است' }, { status: 401 })
         }
 
+        if (user.banned) {
+            return NextResponse.json(
+                { error: 'حساب کاربری شما مسدود شده است. لطفاً با پشتیبانی تماس بگیرید.' },
+                { status: 403 }
+            )
+        }
+
         const token = await signToken(user.id)
 
         const cookieStore = await cookies()

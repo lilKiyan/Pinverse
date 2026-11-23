@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser, COOKIE_NAME, hashPassword, comparePassword } from '@/lib/auth'
+import { getCurrentUser, COOKIE_NAME, hashPassword, comparePassword, signToken } from '@/lib/auth'
+import { validatePassword } from '@/lib/validations'
 import { cookies } from 'next/headers'
 
 
@@ -77,6 +78,14 @@ export async function PATCH(request: Request) {
                 )
             }
 
+            const passwordErr = validatePassword(newPassword)
+            if (passwordErr) {
+                return NextResponse.json(
+                    { error: passwordErr },
+                    { status: 400 }
+                )
+            }
+
             newPasswordHash = await hashPassword(newPassword)
         }
 
@@ -100,6 +109,18 @@ export async function PATCH(request: Request) {
                 bio: true,
             },
         })
+
+        if (newPasswordHash) {
+            const token = await signToken(user.id)
+            const cookieStore = await cookies()
+            cookieStore.set(COOKIE_NAME, token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                path: '/',
+                maxAge: 60 * 60 * 24 * 7,
+                sameSite: 'lax',
+            })
+        }
 
         return NextResponse.json({ user: updatedUser })
     } catch (error) {

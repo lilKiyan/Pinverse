@@ -2,7 +2,8 @@ export const runtime = 'nodejs'
 
 import { NextResponse } from 'next/server'
 import { v2 as cloudinary } from 'cloudinary'
-import { rateLimit, getClientIp } from '@/lib/rateLimit'   
+import { rateLimit, getClientIp } from '@/lib/rateLimit'
+import { getCurrentUser } from '@/lib/auth'   
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -14,7 +15,15 @@ const MAX_SERVER_SIZE = 5 * 1024 * 1024   // 5MB
 
 export async function POST(request: Request) {
   try {
-    const rl = rateLimit(getClientIp(request), { limit: 10, windowMs: 600_000 })
+    const user = await getCurrentUser()
+    if (!user) {
+      return NextResponse.json(
+        { error: 'برای آپلود تصویر باید وارد حساب کاربری شوید' },
+        { status: 401 }
+      )
+    }
+
+    const rl = rateLimit(`upload_${user.id}_${getClientIp(request)}`, { limit: 10, windowMs: 600_000 })
     if (!rl.ok) {
       return NextResponse.json(
         { error: `سقف آپلود پر شده. ${rl.retryAfter} ثانیه دیگر تلاش کنید` },
