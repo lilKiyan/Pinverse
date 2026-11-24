@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation'
 import Sidebar from './Sidebar'
 import Navbar from './Navbar'
 import MobileNav from './MobileNav'
+import BootScreen from './BootScreen'
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
@@ -12,6 +13,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     if (isAdmin) {
         return (
             <div className="min-h-screen w-full bg-[#FAFAFB]">
+                <BootScreen />
                 {children}
             </div>
         )
@@ -19,6 +21,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
     return (
         <>
+            <BootScreen />
             <div className="flex h-dvh overflow-hidden">
                 <Sidebar />
                 <div className="flex-1 min-w-0 flex flex-col h-full">

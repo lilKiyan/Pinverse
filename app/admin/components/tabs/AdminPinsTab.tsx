@@ -18,6 +18,7 @@ import {
     FiChevronLeft,
 } from 'react-icons/fi'
 import { AdminPin, CategoryRow } from '../../types'
+import { useDragScroll } from '@/lib/useDragScroll'
 
 type AdminPinsTabProps = {
     pins: AdminPin[]
@@ -47,6 +48,7 @@ export default function AdminPinsTab({
     onDeletePin,
 }: AdminPinsTabProps) {
     const [localSearch, setLocalSearch] = useState(pinSearch)
+    const categoriesScrollRef = useDragScroll<HTMLDivElement>()
 
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault()
@@ -55,48 +57,14 @@ export default function AdminPinsTab({
 
     return (
         <div>
-            {/* ── نوار فیلتر دسته‌بندی و جستجوی پین‌ها (Sub-Toolbar) ── */}
-            <div className="border-b border-gray-100 bg-[#FAFAFB] px-4 sm:px-6 py-3 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-                {/* فیلتر دسته‌بندی‌ها */}
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
-                    <span className="text-xs font-bold text-gray-500 flex items-center gap-1 shrink-0 ml-1">
-                        <FiTag className="h-3.5 w-3.5 text-gray-400" />
-                        دسته‌بندی:
-                    </span>
-                    <button
-                        type="button"
-                        onClick={() => onCategoryChange('all')}
-                        className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                            pinCategory === 'all'
-                                ? 'bg-gray-900 text-white shadow-xs'
-                                : 'bg-white text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200/80'
-                        }`}
-                    >
-                        همه پین‌ها
-                    </button>
-                    {categories.map((cat) => (
-                        <button
-                            key={cat.id}
-                            type="button"
-                            onClick={() => onCategoryChange(cat.slug)}
-                            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                                pinCategory === cat.slug
-                                ? 'bg-gray-900 text-white shadow-xs'
-                                : 'bg-white text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200/80'
-                            }`}
-                        >
-                            <span
-                                className="h-2 w-2 rounded-full"
-                                style={{ backgroundColor: cat.color }}
-                            />
-                            <span>{cat.name}</span>
-                        </button>
-                    ))}
-                </div>
-
-                {/* فرم جستجوی پین */}
-                <form onSubmit={handleSearchSubmit} className="relative flex-1 sm:w-72 group">
-                    <FiSearch className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 transition-colors group-focus-within:text-gray-900" />
+            {/* ── نوار فیلتر دسته‌بندی و باکس جستجوی بزرگ و استاندارد (Sub-Toolbar) ── */}
+            <div className="border-b border-gray-100 bg-[#FAFAFB] px-4 sm:px-6 py-3.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3.5">
+                {/* باکس جستجوی بزرگ و شاخص */}
+                <form
+                    onSubmit={handleSearchSubmit}
+                    className="relative flex-1 min-w-[280px] max-w-2xl group"
+                >
+                    <FiSearch className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-colors group-focus-within:text-gray-900" />
                     <input
                         type="text"
                         value={localSearch}
@@ -105,8 +73,8 @@ export default function AdminPinsTab({
                             if (!e.target.value) onSearchChange('')
                         }}
                         onBlur={() => onSearchChange(localSearch)}
-                        placeholder="جستجو در عنوان یا سازنده پین..."
-                        className="w-full rounded-xl bg-white pr-9 pl-8 py-2 text-xs text-gray-800 placeholder:text-gray-400 ring-1 ring-gray-200/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-900/15 transition-all shadow-2xs"
+                        placeholder="جستجوی پین‌ها با عنوان، توضیحات یا نام سازنده..."
+                        className="w-full h-11 sm:h-12 rounded-2xl bg-white pr-11 pl-10 text-xs sm:text-sm text-gray-800 placeholder:text-gray-400 ring-1 ring-gray-200/90 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-900/15 transition-all shadow-xs"
                     />
                     {localSearch && (
                         <button
@@ -116,12 +84,55 @@ export default function AdminPinsTab({
                                 onSearchChange('')
                             }}
                             aria-label="پاک کردن جستجو"
-                            className="absolute left-2.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200/80 text-gray-500 hover:bg-gray-300 cursor-pointer"
+                            className="absolute left-3 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200/80 text-gray-500 hover:bg-gray-300 hover:text-gray-800 cursor-pointer transition-colors"
                         >
-                            <FiX className="h-3 w-3" />
+                            <FiX className="h-3.5 w-3.5" />
                         </button>
                     )}
                 </form>
+
+                {/* اسلایدر جمع‌وجور دسته‌بندی‌ها با قابلیت درگ آسان موس */}
+                <div className="flex items-center gap-2 max-w-full xl:max-w-xl overflow-hidden">
+                    <span className="text-xs font-bold text-gray-500 flex items-center gap-1 shrink-0 ml-1">
+                        <FiTag className="h-3.5 w-3.5 text-gray-400" />
+                        دسته‌ها:
+                    </span>
+
+                    <div
+                        ref={categoriesScrollRef}
+                        className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 px-1 cursor-grab active:cursor-grabbing select-none"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => onCategoryChange('all')}
+                            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                                pinCategory === 'all'
+                                    ? 'bg-gray-900 text-white shadow-xs'
+                                    : 'bg-white text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200/80'
+                            }`}
+                        >
+                            همه
+                        </button>
+                        {categories.map((cat) => (
+                            <button
+                                key={cat.id}
+                                type="button"
+                                onClick={() => onCategoryChange(cat.slug)}
+                                className={`rounded-xl px-2.5 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 shrink-0 ${
+                                    pinCategory === cat.slug
+                                        ? 'bg-gray-900 text-white shadow-xs'
+                                        : 'bg-white text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200/80'
+                                }`}
+                            >
+                                <span
+                                    className="h-2 w-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: cat.color }}
+                                />
+                                <span>{cat.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {/* گرید پین‌ها */}

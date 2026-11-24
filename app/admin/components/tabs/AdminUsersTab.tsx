@@ -16,6 +16,7 @@ import {
     FiDownload,
 } from 'react-icons/fi'
 import { AdminUserRow, UserFilter, getRoleBadge } from '../../types'
+import { useDragScroll } from '@/lib/useDragScroll'
 
 type AdminUsersTabProps = {
     users: AdminUserRow[]
@@ -40,6 +41,7 @@ export default function AdminUsersTab({
 }: AdminUsersTabProps) {
     const [search, setSearch] = useState('')
     const [filter, setFilter] = useState<UserFilter>('all')
+    const rolesScrollRef = useDragScroll<HTMLDivElement>()
 
     const bannedCount = useMemo(() => users.filter((u) => u.banned).length, [users])
     const adminCount = useMemo(() => users.filter((u) => u.roles?.[0]?.role?.name === 'admin').length, [users])
@@ -66,63 +68,26 @@ export default function AdminUsersTab({
     return (
         <div>
             {/* ── نوار فیلتر نقش‌ها، جستجو و خروجی CSV (Sub-Toolbar) ── */}
-            <div className="border-b border-gray-100 bg-[#FAFAFB] px-4 sm:px-6 py-3 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-                {/* دکمه‌های فیلتر نقش */}
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1">
-                    <span className="text-xs font-bold text-gray-500 flex items-center gap-1 shrink-0 ml-1">
-                        <FiSliders className="h-3.5 w-3.5 text-gray-400" />
-                        فیلتر نقش:
-                    </span>
-                    {[
-                        { id: 'all' as const, label: 'همه' },
-                        { id: 'admin' as const, label: `ادمین (${adminCount.toLocaleString('fa-IR')})`, dot: 'bg-red-500' },
-                        { id: 'moderator' as const, label: `ناظر (${moderatorCount.toLocaleString('fa-IR')})`, dot: 'bg-blue-500' },
-                        { id: 'user' as const, label: 'کاربر عادی' },
-                        {
-                            id: 'banned' as const,
-                            label: bannedCount > 0 ? `مسدود (${bannedCount.toLocaleString('fa-IR')})` : 'مسدود',
-                            dot: 'bg-rose-600',
-                        },
-                    ].map((f) => (
-                        <button
-                            key={f.id}
-                            type="button"
-                            onClick={() => setFilter(f.id)}
-                            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                                filter === f.id
-                                    ? 'bg-gray-900 text-white shadow-xs'
-                                    : 'bg-white text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200/80'
-                            }`}
-                        >
-                            {f.dot && (
-                                <span
-                                    className={`h-1.5 w-1.5 rounded-full ${filter === f.id ? 'bg-white' : f.dot}`}
-                                />
-                            )}
-                            <span>{f.label}</span>
-                        </button>
-                    ))}
-                </div>
-
+            <div className="border-b border-gray-100 bg-[#FAFAFB] px-4 sm:px-6 py-3.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3.5">
                 {/* جستجو و دکمه دانلود CSV */}
-                <div className="flex items-center gap-2">
-                    <div className="relative flex-1 sm:w-72 group">
-                        <FiSearch className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400 transition-colors group-focus-within:text-gray-900" />
+                <div className="flex items-center gap-2.5 flex-1 max-w-xl">
+                    <div className="relative flex-1 group">
+                        <FiSearch className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-colors group-focus-within:text-gray-900" />
                         <input
                             type="text"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            placeholder="جستجوی کاربر (نام، یوزرنیم، ایمیل)..."
-                            className="w-full rounded-xl bg-white pr-9 pl-8 py-2 text-xs text-gray-800 placeholder:text-gray-400 ring-1 ring-gray-200/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-900/15 transition-all shadow-2xs"
+                            placeholder="جستجوی کاربر (نام، نام کاربری، ایمیل)..."
+                            className="w-full h-11 sm:h-12 rounded-2xl bg-white pr-11 pl-10 text-xs sm:text-sm text-gray-800 placeholder:text-gray-400 ring-1 ring-gray-200/90 focus:bg-white focus:outline-none focus:ring-2 focus:ring-gray-900/15 transition-all shadow-xs"
                         />
                         {search && (
                             <button
                                 type="button"
                                 onClick={() => setSearch('')}
                                 aria-label="پاک کردن جستجو"
-                                className="absolute left-2.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full bg-gray-200/80 text-gray-500 hover:bg-gray-300 cursor-pointer"
+                                className="absolute left-3 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full bg-gray-200/80 text-gray-500 hover:bg-gray-300 hover:text-gray-800 cursor-pointer transition-colors"
                             >
-                                <FiX className="h-3 w-3" />
+                                <FiX className="h-3.5 w-3.5" />
                             </button>
                         )}
                     </div>
@@ -131,11 +96,53 @@ export default function AdminUsersTab({
                         type="button"
                         onClick={onExportCSV}
                         title="دانلود فایل اکسل لیست کاربران"
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 px-3 py-2 text-xs font-bold shadow-2xs active:scale-95 transition-all cursor-pointer shrink-0"
+                        className="inline-flex items-center gap-1.5 rounded-2xl bg-white hover:bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/80 px-3.5 sm:px-4 h-11 sm:h-12 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer shrink-0"
                     >
-                        <FiDownload className="h-3.5 w-3.5 text-emerald-600" />
+                        <FiDownload className="h-4 w-4 text-emerald-600" />
                         <span className="hidden sm:inline">خروجی CSV</span>
                     </button>
+                </div>
+
+                {/* دکمه‌های فیلتر نقش با درگ اسکرول روان */}
+                <div className="flex items-center gap-2 max-w-full overflow-hidden">
+                    <span className="text-xs font-bold text-gray-500 flex items-center gap-1 shrink-0 ml-1">
+                        <FiSliders className="h-3.5 w-3.5 text-gray-400" />
+                        نقش‌ها:
+                    </span>
+                    <div
+                        ref={rolesScrollRef}
+                        className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-1 px-1 cursor-grab active:cursor-grabbing select-none"
+                    >
+                        {[
+                            { id: 'all' as const, label: 'همه' },
+                            { id: 'admin' as const, label: `ادمین (${adminCount.toLocaleString('fa-IR')})`, dot: 'bg-red-500' },
+                            { id: 'moderator' as const, label: `ناظر (${moderatorCount.toLocaleString('fa-IR')})`, dot: 'bg-blue-500' },
+                            { id: 'user' as const, label: 'کاربر عادی' },
+                            {
+                                id: 'banned' as const,
+                                label: bannedCount > 0 ? `مسدود (${bannedCount.toLocaleString('fa-IR')})` : 'مسدود',
+                                dot: 'bg-rose-600',
+                            },
+                        ].map((f) => (
+                            <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => setFilter(f.id)}
+                                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                                    filter === f.id
+                                        ? 'bg-gray-900 text-white shadow-xs'
+                                        : 'bg-white text-gray-600 hover:bg-gray-100 ring-1 ring-gray-200/80'
+                                }`}
+                            >
+                                {f.dot && (
+                                    <span
+                                        className={`h-1.5 w-1.5 rounded-full ${filter === f.id ? 'bg-white' : f.dot}`}
+                                    />
+                                )}
+                                <span>{f.label}</span>
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
