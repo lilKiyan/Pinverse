@@ -52,6 +52,7 @@ export async function GET(
                     where: {
                         id: { not: id },
                         categoryId: currentPin.categoryId,
+                        status: 'APPROVED',
                     },
                     orderBy: { createdAt: 'desc' },
                     take: 12,
@@ -67,6 +68,7 @@ export async function GET(
                 where: {
                     id: { not: id },
                     userId: currentPin.userId,
+                    status: 'APPROVED',
                 },
                 orderBy: { createdAt: 'desc' },
                 take: 12,

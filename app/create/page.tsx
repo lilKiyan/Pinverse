@@ -19,6 +19,7 @@ import {
     FiArrowRight,
     FiTrash2,
     FiRefreshCw,
+    FiClock,
 } from 'react-icons/fi'
 import { compressImage } from '@/lib/imageCompress'
 import { getCategoryIcon } from '@/lib/categories'
@@ -84,6 +85,11 @@ export default function CreatePage() {
     const [submitError, setSubmitError] = useState('')
     const [compressionInfo, setCompressionInfo] = useState<{ from: number; to: number } | null>(null)
     const [category, setCategory] = useState('other')
+    const [createdPinResult, setCreatedPinResult] = useState<{
+        id: string
+        title: string
+        status: string
+    } | null>(null)
 
     useEffect(() => {
         return () => {
@@ -128,13 +134,34 @@ export default function CreatePage() {
 
             return pinRes.json()
         },
-        onSuccess: () => {
+        onSuccess: (data: { id: string; title: string; status?: string }) => {
             queryClient.invalidateQueries({ queryKey: ['pins'], refetchType: 'all' })
             queryClient.invalidateQueries({ queryKey: ['my-pins'], refetchType: 'all' })
             queryClient.invalidateQueries({ queryKey: ['categories-all'] })
-            router.push('/')
+
+            if (data.status === 'APPROVED') {
+                router.push(`/pin/${data.id}`)
+            } else {
+                setCreatedPinResult({
+                    id: data.id,
+                    title: data.title,
+                    status: data.status || 'PENDING',
+                })
+            }
         },
     })
+
+    const handleResetForm = () => {
+        setTitle('')
+        setDescription('')
+        setSelectedFile(null)
+        setDimensions(null)
+        if (previewUrl) URL.revokeObjectURL(previewUrl)
+        setPreviewUrl('')
+        setCompressionInfo(null)
+        setSubmitError('')
+        setCreatedPinResult(null)
+    }
 
     const processFile = async (file: File) => {
         if (!file.type.startsWith('image/')) {
@@ -661,6 +688,64 @@ export default function CreatePage() {
                     </div>
                 </form>
             </div>
+
+            {/* ── مودال اعلام وضعیت انتظار تایید پین ── */}
+            {createdPinResult && (
+                <div
+                    className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-md p-4 animate-[fadeIn_0.2s_ease-out]"
+                >
+                    <div
+                        dir="rtl"
+                        className="w-full max-w-md rounded-3xl bg-white p-6 sm:p-7 shadow-2xl ring-1 ring-black/5 animate-[scaleUp_0.25s_ease-out] text-center"
+                    >
+                        {/* آیکون ساعت با انیمیشن ملایم */}
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-tr from-amber-500 to-amber-400 text-white shadow-xl shadow-amber-500/30">
+                            <FiClock className="h-8 w-8 animate-pulse" />
+                        </div>
+
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-black mb-2">
+                            <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+                            <span>در انتظار تایید مدیر</span>
+                        </div>
+
+                        <h3 className="text-lg sm:text-xl font-black text-gray-900">
+                            پین شما با موفقیت ثبت شد!
+                        </h3>
+
+                        <p className="mt-2 text-xs sm:text-sm text-gray-600 leading-relaxed">
+                            پین «<strong className="font-bold text-gray-900">{createdPinResult.title}</strong>» با موفقیت در صف بررسی قرار گرفت و پس از تایید توسط مدیران، برای تمامی کاربران در صفحه اصلی منتشر خواهد شد.
+                        </p>
+
+                        <div className="mt-6 flex flex-col gap-2.5">
+                            <Link
+                                href="/myboards"
+                                className="w-full inline-flex items-center justify-center gap-2 rounded-2xl bg-gray-900 hover:bg-black py-3 text-xs sm:text-sm font-bold text-white transition-all shadow-md active:scale-[0.98] no-underline"
+                            >
+                                <FiImage className="h-4 w-4" />
+                                <span>مشاهده در پین‌های من</span>
+                            </Link>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleResetForm}
+                                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl bg-gray-100 hover:bg-gray-200 py-2.5 text-xs font-bold text-gray-700 transition-colors cursor-pointer"
+                                >
+                                    <FiRefreshCw className="h-3.5 w-3.5" />
+                                    <span>ساخت پین جدید</span>
+                                </button>
+                                <Link
+                                    href="/"
+                                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-2xl bg-gray-100 hover:bg-gray-200 py-2.5 text-xs font-bold text-gray-700 transition-colors no-underline"
+                                >
+                                    <FiArrowRight className="h-3.5 w-3.5" />
+                                    <span>صفحه اصلی</span>
+                                </Link>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <style>{`
                 @keyframes fadeInUp {

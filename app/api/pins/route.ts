@@ -38,9 +38,10 @@ export async function GET(request: Request) {
             : {}
 
         // دریافت یک پین بیشتر (limit + 1) تا بدون نیاز به count متوجه وجود صفحه بعد بشویم
+        // فقط پین‌های تایید شده (APPROVED) در فید عمومی نمایش داده می‌شوند
         const rawPins = await prisma.pin.findMany({
             where: {
-                AND: [reportedFilter, categoryFilter],
+                AND: [reportedFilter, categoryFilter, { status: 'APPROVED' }],
             },
             orderBy: { createdAt: 'desc' },
             skip,
@@ -180,6 +181,16 @@ export async function POST(request: Request) {
                 select: { id: true },
             }))?.id ?? null
 
+        // بررسی نقش کاربر: آیا مدیر یا ناظر است؟ پین مدیران مستقیماً منتشر می‌شود، بقیه در انتظار تایید قرار می‌گیرند
+        const userRoles = await prisma.userRole.findMany({
+            where: { userId: user.id },
+            include: { role: true },
+        })
+        const isAdminOrMod = userRoles.some(
+            (r) => r.role.name === 'admin' || r.role.name === 'moderator'
+        )
+        const initialStatus = isAdminOrMod ? 'APPROVED' : 'PENDING'
+
         const newPin = await prisma.pin.create({
             data: {
                 title: title.trim(),
@@ -189,11 +200,18 @@ export async function POST(request: Request) {
                 imageWidth: imageWidth ?? null,
                 imageHeight: imageHeight ?? null,
                 boardId: boardId || null,
-                categoryId,  
+                categoryId,
+                status: initialStatus,
             },
         })
 
-        return NextResponse.json(newPin, { status: 201 })
+        return NextResponse.json({
+            ...newPin,
+            message:
+                initialStatus === 'PENDING'
+                    ? 'پین شما با موفقیت ثبت شد و پس از بررسی و تایید توسط مدیران، منتشر خواهد شد.'
+                    : 'پین شما با موفقیت منتشر شد.',
+        }, { status: 201 })
     } catch (error) {
         console.error('POST /api/pins error:', error)
         return NextResponse.json(

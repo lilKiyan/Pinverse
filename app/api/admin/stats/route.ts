@@ -18,10 +18,11 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'کمی آرام‌تر!' }, { status: 429 })
         }
 
-        const [totalUsers, totalPins, totalReports, pendingReports, totalLikes, totalMessages] =
+        const [totalUsers, totalPins, pendingPins, totalReports, pendingReports, totalLikes, totalMessages] =
             await Promise.all([
                 prisma.user.count(),
                 prisma.pin.count(),
+                prisma.pin.count({ where: { status: 'PENDING' } }),
                 prisma.report.count(),
                 prisma.report.count({ where: { status: 'pending' } }),
                 prisma.like.count(),
@@ -32,6 +33,7 @@ export async function GET(request: Request) {
             stats: {
                 totalUsers,
                 totalPins,
+                pendingPins,
                 totalReports,
                 pendingReports,
                 totalLikes,

@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { FiLogIn, FiMail, FiLock, FiAlertCircle, FiLoader, FiArrowLeft } from 'react-icons/fi'
+import { FiLogIn, FiUser, FiLock, FiAlertCircle, FiLoader, FiArrowLeft } from 'react-icons/fi'
 import { useAuthStore } from '@/lib/authStore'
 
 function LoginForm() {
@@ -150,17 +150,17 @@ function LoginForm() {
 
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-slate-700">
-                  ایمیل
+                  ایمیل یا نام کاربری
                 </label>
                 <div className="relative">
                   <span className="absolute right-3.5 sm:right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                    <FiMail className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+                    <FiUser className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
                   </span>
                   <input
-                    type="email"
+                    type="text"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="example@mail.com"
+                    placeholder="example@mail.com یا admin"
                     className="w-full min-h-[44px] sm:min-h-[46px] bg-slate-50/80 hover:bg-slate-100/70 focus:bg-white border border-slate-200/80 rounded-xl sm:rounded-2xl pr-[48px] sm:pr-[54px] pl-3.5 sm:pl-4 py-2.5 sm:py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-500/10 transition-all duration-200"
                     dir="ltr"
                     required

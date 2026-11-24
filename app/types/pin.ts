@@ -25,6 +25,8 @@ export type PinDTO = {
     link?: string | null
     isOwner?: boolean
     isSavedByMe?: boolean
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED'
+    rejectionReason?: string | null
     category?: CategoryInfo | null 
     savedBoards?: SavedBoardInfo[]
 }

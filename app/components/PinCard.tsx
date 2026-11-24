@@ -353,6 +353,33 @@ const PinCard = memo(({
                                 {category.name}
                             </span>
                         )}
+
+                        {pin.status === 'PENDING' && (
+                            <span
+                                className="absolute bottom-2 right-2 z-10
+                                    inline-flex items-center gap-1
+                                    bg-amber-500/90 backdrop-blur-md
+                                    text-white text-[10px] font-black
+                                    px-2 py-0.5 rounded-full
+                                    ring-1 ring-white/30 shadow-md animate-pulse"
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-white" />
+                                در انتظار تایید
+                            </span>
+                        )}
+
+                        {pin.status === 'REJECTED' && (
+                            <span
+                                className="absolute bottom-2 right-2 z-10
+                                    inline-flex items-center gap-1
+                                    bg-rose-600/90 backdrop-blur-md
+                                    text-white text-[10px] font-black
+                                    px-2 py-0.5 rounded-full
+                                    ring-1 ring-white/30 shadow-md"
+                            >
+                                رد شده
+                            </span>
+                        )}
                     </div>
                 </Link>
 

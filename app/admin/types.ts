@@ -1,6 +1,7 @@
 export type Stats = {
     totalUsers: number
     totalPins: number
+    pendingPins: number
     totalReports: number
     pendingReports: number
     totalLikes: number
@@ -71,6 +72,8 @@ export type AdminPin = {
     title: string
     description: string | null
     imageUrl: string
+    status: 'PENDING' | 'APPROVED' | 'REJECTED'
+    rejectionReason?: string | null
     createdAt: string
     user: {
         id: string
@@ -96,12 +99,18 @@ export type AdminPin = {
 export type AdminPinsResponse = {
     pins: AdminPin[]
     total: number
+    counts?: {
+        pending: number
+        approved: number
+        rejected: number
+    }
     page: number
     totalPages: number
 }
 
 export type Tab = 'reports' | 'users' | 'roles' | 'pins' | 'categories'
 export type UserFilter = 'all' | 'admin' | 'moderator' | 'user' | 'banned'
+export type PinStatusFilter = 'all' | 'PENDING' | 'APPROVED' | 'REJECTED'
 export type ToastState = { message: string; type: 'success' | 'error' } | null
 
 export const REASON_LABELS: Record<string, string> = {

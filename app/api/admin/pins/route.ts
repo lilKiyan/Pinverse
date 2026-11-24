@@ -12,11 +12,16 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const q = searchParams.get('q')?.trim() || ''
         const categorySlug = searchParams.get('category')?.trim() || ''
+        const statusParam = searchParams.get('status')?.trim().toUpperCase() || 'ALL'
         const page = Math.max(1, Number(searchParams.get('page')) || 1)
         const limit = Math.min(50, Math.max(10, Number(searchParams.get('limit')) || 20))
         const skip = (page - 1) * limit
 
         const where: any = {}
+
+        if (statusParam && statusParam !== 'ALL') {
+            where.status = statusParam
+        }
 
         if (q) {
             where.OR = [
@@ -31,8 +36,11 @@ export async function GET(request: Request) {
             where.category = { slug: categorySlug }
         }
 
-        const [total, pins] = await Promise.all([
+        const [total, pendingCount, approvedCount, rejectedCount, pins] = await Promise.all([
             prisma.pin.count({ where }),
+            prisma.pin.count({ where: { status: 'PENDING' } }),
+            prisma.pin.count({ where: { status: 'APPROVED' } }),
+            prisma.pin.count({ where: { status: 'REJECTED' } }),
             prisma.pin.findMany({
                 where,
                 skip,
@@ -71,6 +79,11 @@ export async function GET(request: Request) {
         return NextResponse.json({
             pins,
             total,
+            counts: {
+                pending: pendingCount,
+                approved: approvedCount,
+                rejected: rejectedCount,
+            },
             page,
             totalPages: Math.ceil(total / limit),
         })

@@ -25,6 +25,7 @@ import {
     AdminPin,
     Tab,
     ToastState,
+    PinStatusFilter,
 } from './types'
 
 import AdminNavbar from './components/AdminNavbar'
@@ -51,6 +52,7 @@ export default function AdminPage() {
 
     const [pinSearch, setPinSearch] = useState('')
     const [pinCategory, setPinCategory] = useState('all')
+    const [pinStatus, setPinStatus] = useState<PinStatusFilter>('all')
     const [pinPage, setPinPage] = useState(1)
 
     const [editingUser, setEditingUser] = useState<AdminUserRow | null>(null)
@@ -152,11 +154,12 @@ export default function AdminPage() {
         isLoading: loadingPins,
         isFetching: fetchingPins,
     } = useQuery<AdminPinsResponse>({
-        queryKey: ['admin-pins', pinSearch, pinCategory, pinPage],
+        queryKey: ['admin-pins', pinSearch, pinCategory, pinStatus, pinPage],
         queryFn: async () => {
             const params = new URLSearchParams()
             if (pinSearch.trim()) params.set('q', pinSearch.trim())
             if (pinCategory && pinCategory !== 'all') params.set('category', pinCategory)
+            if (pinStatus && pinStatus !== 'all') params.set('status', pinStatus)
             params.set('page', String(pinPage))
             params.set('limit', '18')
             const res = await fetch(`/api/admin/pins?${params.toString()}`)
@@ -164,6 +167,42 @@ export default function AdminPage() {
             return res.json()
         },
         enabled: !!statsData && tab === 'pins',
+    })
+
+    const moderatePinMutation = useMutation({
+        mutationFn: async ({
+            pinId,
+            status,
+            reason,
+        }: {
+            pinId: string
+            status: 'APPROVED' | 'REJECTED'
+            reason?: string
+        }) => {
+            setActionLoading(`${pinId}:${status}`)
+            const res = await fetch(`/api/admin/pins/${pinId}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status, reason }),
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || 'خطا در تغییر وضعیت پین')
+            }
+            return res.json()
+        },
+        onSuccess: (data) => {
+            showToast(data.message || 'وضعیت پین با موفقیت بروزرسانی شد', 'success')
+            queryClient.invalidateQueries({ queryKey: ['admin-pins'] })
+            queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
+            queryClient.invalidateQueries({ queryKey: ['pins'] })
+        },
+        onError: (err: any) => {
+            showToast(err.message || 'خطا در تغییر وضعیت پین', 'error')
+        },
+        onSettled: () => {
+            setActionLoading(null)
+        },
     })
 
     const reportActionMutation = useMutation({
@@ -411,8 +450,11 @@ export default function AdminPage() {
                                     isLoading={loadingPins}
                                     pinSearch={pinSearch}
                                     pinCategory={pinCategory}
+                                    pinStatus={pinStatus}
                                     pinPage={pinPage}
                                     totalPages={pinsData?.totalPages || 1}
+                                    counts={pinsData?.counts}
+                                    actionLoading={actionLoading}
                                     onSearchChange={(q) => {
                                         setPinSearch(q)
                                         setPinPage(1)
@@ -421,7 +463,24 @@ export default function AdminPage() {
                                         setPinCategory(c)
                                         setPinPage(1)
                                     }}
+                                    onStatusChange={(s) => {
+                                        setPinStatus(s)
+                                        setPinPage(1)
+                                    }}
                                     onPageChange={setPinPage}
+                                    onApprovePin={(pin) =>
+                                        moderatePinMutation.mutateAsync({
+                                            pinId: pin.id,
+                                            status: 'APPROVED',
+                                        })
+                                    }
+                                    onRejectPin={(pin, reason) =>
+                                        moderatePinMutation.mutateAsync({
+                                            pinId: pin.id,
+                                            status: 'REJECTED',
+                                            reason,
+                                        })
+                                    }
                                     onDeletePin={setPinToDelete}
                                 />
                             )}

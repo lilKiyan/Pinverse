@@ -33,11 +33,14 @@ export async function GET(
             )
         }
 
+        const isOwnProfile = Boolean(currentUser && currentUser.id === id)
+        const pinStatusFilter = isOwnProfile ? {} : { status: 'APPROVED' }
+
         const [followersCount, followingCount, pins] = await Promise.all([
             prisma.follow.count({ where: { followingId: id } }),
             prisma.follow.count({ where: { followerId: id } }),
             prisma.pin.findMany({
-                where: { userId: id },
+                where: { userId: id, ...pinStatusFilter },
                 orderBy: { createdAt: 'desc' },
                 take: 50,
                 include: {
@@ -80,6 +83,7 @@ export async function GET(
                 createdAt: pin.createdAt,
                 updatedAt: pin.updatedAt,
                 userId: pin.userId,
+                status: pin.status,
                 isOwner: currentUser ? pin.userId === currentUser.id : false,
                 isSavedByMe: userSaves.length > 0,
                 category: pin.category

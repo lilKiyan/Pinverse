@@ -15,6 +15,7 @@ export async function GET(request: Request) {
 
         const pins = await prisma.pin.findMany({
             where: {
+                status: 'APPROVED',
                 OR: [
                     { title: { contains: q, mode: 'insensitive' } },
                     { description: { contains: q, mode: 'insensitive' } },

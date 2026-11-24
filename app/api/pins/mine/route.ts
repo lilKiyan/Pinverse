@@ -39,6 +39,8 @@ export async function GET() {
                 createdAt: pin.createdAt,
                 updatedAt: pin.updatedAt,
                 userId: pin.userId,
+                status: pin.status,
+                rejectionReason: pin.rejectionReason,
                 isOwner: true,
                 isSavedByMe: userSaves.length > 0,
                 category: pin.category

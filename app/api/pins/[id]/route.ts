@@ -205,6 +205,33 @@ export async function GET(
             )
         }
 
+        // اگر پین هنوز تایید نشده، فقط خود سازنده و مدیران اجازه مشاهده دارند
+        if (pin.status !== 'APPROVED') {
+            const isOwner = Boolean(user && user.id === pin.userId)
+            let isAdmin = false
+            if (user && !isOwner) {
+                const userRoles = await prisma.userRole.findMany({
+                    where: { userId: user.id },
+                    include: { role: true },
+                })
+                isAdmin = userRoles.some(
+                    (r) => r.role.name === 'admin' || r.role.name === 'moderator'
+                )
+            }
+
+            if (!isOwner && !isAdmin) {
+                return NextResponse.json(
+                    {
+                        error:
+                            pin.status === 'REJECTED'
+                                ? 'این پین توسط مدیر تایید نشده است'
+                                : 'این پین در انتظار بررسی و تایید مدیر است',
+                    },
+                    { status: 403 }
+                )
+            }
+        }
+
         const userSaves = user ? pin.saves.filter((s) => s.userId === user.id) : []
 
         const pinData = {
@@ -213,6 +240,8 @@ export async function GET(
             description: pin.description,
             imageUrl: pin.imageUrl,
             link: pin.link,
+            status: pin.status,
+            rejectionReason: pin.rejectionReason,
             createdAt: pin.createdAt,
             updatedAt: pin.updatedAt,
             userId: pin.userId,

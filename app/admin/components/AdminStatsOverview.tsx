@@ -53,9 +53,10 @@ export default function AdminStatsOverview({
         {
             key: 'pins',
             icon: FiImage,
-            label: 'کل پین‌ها',
+            label: stats.pendingPins > 0 ? `پین‌ها (${stats.pendingPins} تایید نشده)` : 'کل پین‌ها',
             value: stats.totalPins,
-            iconBg: 'bg-rose-50 text-rose-600',
+            alertBadge: stats.pendingPins > 0 ? `${stats.pendingPins.toLocaleString('fa-IR')} تایید نشده` : null,
+            iconBg: stats.pendingPins > 0 ? 'bg-amber-100 text-amber-700' : 'bg-rose-50 text-rose-600',
             onClick: () => onSelectTab('pins'),
         },
         {
@@ -101,6 +102,11 @@ export default function AdminStatsOverview({
                             {item.alert && (
                                 <span className="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">
                                     فوری
+                                </span>
+                            )}
+                            {item.alertBadge && !item.alert && (
+                                <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white shadow-2xs">
+                                    {item.alertBadge}
                                 </span>
                             )}
                         </div>

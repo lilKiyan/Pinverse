@@ -47,6 +47,8 @@ model Pin {
   imageWidth  Int?
   imageHeight Int?
   link        String?
+  status      String   @default("APPROVED") // PENDING | APPROVED | REJECTED
+  rejectionReason String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -68,6 +70,9 @@ model Pin {
 
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([userId, status])
 }
 
 model Like {

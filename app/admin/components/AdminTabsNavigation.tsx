@@ -50,8 +50,11 @@ export default function AdminTabsNavigation({
             id: 'pins' as const,
             label: 'مدیریت پین‌ها',
             icon: FiImage,
-            badge: stats.totalPins,
-            badgeColor: 'bg-gray-100 text-gray-700',
+            badge: stats.pendingPins > 0 ? stats.pendingPins : stats.totalPins,
+            badgeColor:
+                stats.pendingPins > 0
+                    ? 'bg-amber-500 text-white font-extrabold shadow-xs shadow-amber-200'
+                    : 'bg-gray-100 text-gray-700',
             activeClass: 'border-rose-600 text-rose-600 font-black',
         },
         {

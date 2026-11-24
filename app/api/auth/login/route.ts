@@ -4,6 +4,7 @@ import { comparePassword, signToken, COOKIE_NAME } from '@/lib/auth'
 import { cookies } from 'next/headers'
 import { normalizeEmail } from '@/lib/validations'
 import { rateLimit, getClientIp } from '@/lib/rateLimit'
+import { seedDatabase } from '@/lib/bootstrap'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -20,25 +21,59 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json()
-        const { email, password } = body
+        const rawIdentifier = body.identifier ?? body.email
+        const { password } = body
 
-        if (!email || !password) {
-            return NextResponse.json({ error: 'ایمیل و رمز عبور الزامی است' }, { status: 400 })
+        if (!rawIdentifier || !password) {
+            return NextResponse.json(
+                { error: 'ایمیل یا نام کاربری و رمز عبور الزامی است' },
+                { status: 400 }
+            )
         }
 
-        const normalizedEmail = normalizeEmail(email)
+        const normalizedIdentifier = normalizeEmail(String(rawIdentifier))
 
-        const user = await prisma.user.findFirst({
-            where: { email: { equals: normalizedEmail, mode: 'insensitive' } },
+        let user = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { email: { equals: normalizedIdentifier, mode: 'insensitive' } },
+                    { username: { equals: normalizedIdentifier, mode: 'insensitive' } },
+                ],
+            },
         })
 
+        // در دیتابیس کاملاً تازه (بدون هیچ کاربری)، هنگام ورود با admin راه‌اندازی اولیه به‌صورت خودکار انجام می‌شود
+        if (
+            !user &&
+            (normalizedIdentifier === 'admin' || normalizedIdentifier === 'admin@pinverse.ir')
+        ) {
+            const totalUsers = await prisma.user.count()
+            if (totalUsers === 0) {
+                await seedDatabase(prisma)
+                user = await prisma.user.findFirst({
+                    where: {
+                        OR: [
+                            { email: { equals: normalizedIdentifier, mode: 'insensitive' } },
+                            { username: { equals: normalizedIdentifier, mode: 'insensitive' } },
+                        ],
+                    },
+                })
+            }
+        }
+
         if (!user) {
-            return NextResponse.json({ error: 'ایمیل یا رمز عبور اشتباه است' }, { status: 401 })
+            return NextResponse.json(
+                { error: 'ایمیل/نام کاربری یا رمز عبور اشتباه است' },
+                { status: 401 }
+            )
         }
 
         const isPasswordValid = await comparePassword(password, user.password)
         if (!isPasswordValid) {
-            return NextResponse.json({ error: 'ایمیل یا رمز عبور اشتباه است' }, { status: 401 })
+            return NextResponse.json(
+                { error: 'ایمیل/نام کاربری یا رمز عبور اشتباه است' },
+                { status: 401 }
+            )
         }
 
         if (user.banned) {
