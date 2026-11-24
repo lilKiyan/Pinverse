@@ -41,7 +41,7 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
             el.classList.add('cursor-grabbing', 'select-none')
         }
 
-        // ── ۲. حرکت ماوس با در نظر گرفتن RTL ──
+        // ── ۲. حرکت ماوس با کشیدن طبیعی محتوا همگام با جهت ماوس ──
         const onMouseMove = (e: MouseEvent) => {
             if (!isDownRef.current) return
 
@@ -53,9 +53,8 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
                 hasDraggedRef.current = true
             }
 
-            // تشخیص جهت چیدمان راست‌به‌چپ (RTL)
-            const isRTL = getComputedStyle(el).direction === 'rtl'
-            el.scrollLeft += isRTL ? deltaX : -deltaX
+            // کشیدن به راست محتوا را به راست می‌برد، کشیدن به چپ به چپ
+            el.scrollLeft -= deltaX
         }
 
         // ── ۳. رها کردن ماوس با اینرسی ملایم ──
@@ -65,12 +64,11 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
 
             el.classList.remove('cursor-grabbing', 'select-none')
 
-            const isRTL = getComputedStyle(el).direction === 'rtl'
             let vel = velocityRef.current * 1.25
 
             const stepInertia = () => {
                 if (Math.abs(vel) > 0.4) {
-                    el.scrollLeft += isRTL ? vel : -vel
+                    el.scrollLeft -= vel
                     vel *= 0.92 // اصطکاک نرم
                     animIdRef.current = requestAnimationFrame(stepInertia)
                 } else {
@@ -88,13 +86,11 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
             }, 100)
         }
 
-        // ── ۴. تبدیل غلتک عمودی ماوس به اسکرول افقی ──
+        // ── ۴. تبدیل غلتک عمودی ماوس به اسکرول افقی طبیعی ──
         const onWheel = (e: WheelEvent) => {
             if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
                 e.preventDefault()
-                const isRTL = getComputedStyle(el).direction === 'rtl'
-                const wheelDelta = isRTL ? -e.deltaY : e.deltaY
-                el.scrollLeft += wheelDelta * 0.9
+                el.scrollLeft += e.deltaY * 0.9
             }
         }
 
