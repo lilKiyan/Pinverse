@@ -374,7 +374,7 @@ export default function SettingsPage() {
                                         <p className="truncate text-sm font-bold text-gray-900">
                                             {name || currentUser.name || 'کاربر'}
                                         </p>
-                                        <p className="truncate text-xs text-gray-400 mt-0.5" dir="ltr">
+                                        <p className="truncate text-xs text-gray-400 mt-0.5 text-right" dir="ltr">
                                             @{username || currentUser.username}
                                         </p>
                                         <p className="text-[11px] text-gray-400 mt-1">

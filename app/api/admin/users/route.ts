@@ -27,6 +27,13 @@ export async function GET(request: Request) {
                 email: true,
                 banned: true,
                 createdAt: true,
+                roles: {
+                    select: {
+                        role: {
+                            select: { id: true, name: true, description: true },
+                        },
+                    },
+                },
                 _count: {
                     select: { pins: true, followers: true },
                 },

@@ -14,7 +14,8 @@ import {
 
 async function guardTarget(
     admin: { id: string },
-    targetId: string
+    targetId: string,
+    options?: { allowAdminTarget?: boolean }
 ): Promise<
     | { target: { id: string; banned: boolean; isAdmin: boolean } }
     | NextResponse
@@ -41,9 +42,9 @@ async function guardTarget(
 
     const isAdmin = target.roles.some((r) => r.role.name === 'admin')
 
-    if (isAdmin) {
+    if (isAdmin && !options?.allowAdminTarget) {
         return NextResponse.json(
-            { error: 'ادمین‌ها از طریق پنل قابل مدیریت نیستند' },
+            { error: 'ادمین‌ها از طریق ویرایش مستقیم قابل تغییر نیستند' },
             { status: 403 }
         )
     }
@@ -192,7 +193,7 @@ export async function DELETE(
 
         const { id } = await params
 
-        const guard = await guardTarget(admin, id)
+        const guard = await guardTarget(admin, id, { allowAdminTarget: true })
         if (guard instanceof NextResponse) return guard
 
         // 🛡️ گارد اکانت دمو — محافظت از رزومه!
@@ -204,83 +205,131 @@ export async function DELETE(
             )
         }
 
-
-        await prisma.$transaction(async (tx) => {
-            // ۱. پین‌های کاربر و وابستگی‌های هر پین
-            const userPins = await tx.pin.findMany({
+        // Pre-fetch related IDs concurrently before opening transaction
+        const [userPins, userBoards, userConversations] = await Promise.all([
+            prisma.pin.findMany({
                 where: { userId: id },
                 select: { id: true },
-            })
-            const pinIds = userPins.map((p) => p.id)
-
-            if (pinIds.length > 0) {
-                await tx.report.deleteMany({ where: { pinId: { in: pinIds } } })
-                await tx.notification.deleteMany({ where: { pinId: { in: pinIds } } })
-                await tx.message.updateMany({
-                    where: { pinId: { in: pinIds } },
-                    data: { pinId: null },
-                })
-                await tx.save.deleteMany({ where: { pinId: { in: pinIds } } })
-                await tx.like.deleteMany({ where: { pinId: { in: pinIds } } })
-                await tx.comment.deleteMany({ where: { pinId: { in: pinIds } } })
-                await tx.pin.deleteMany({ where: { userId: id } })
-            }
-
-            // ۲. کامنت‌های او روی پین‌های دیگران
-            await tx.comment.deleteMany({ where: { userId: id } })
-
-            // ۳. لایک‌های او
-            await tx.like.deleteMany({ where: { userId: id } })
-
-            // ۴. سیوهای او (از بردهای بقیه هم)
-            await tx.save.deleteMany({ where: { userId: id } })
-
-            // ۵. گزارش‌هایی که او داده
-            await tx.report.deleteMany({ where: { reporterId: id } })
-
-            // ۶. فالو‌ها — هر دو جهت
-            await tx.follow.deleteMany({
-                where: { OR: [{ followerId: id }, { followingId: id }] },
-            })
-
-            // ۷. پیام‌های او در همه‌ی چت‌ها
-            await tx.message.deleteMany({ where: { senderId: id } })
-
-            // ۸. نوتیف‌های او (گیرنده) و نوتیف‌هایی که او ساخته
-            await tx.notification.deleteMany({
-                where: { OR: [{ userId: id }, { actorId: id }] },
-            })
-
-            // ۹. چت‌هایی که فقط این دو نفر بودند → پاک؛ چت‌های چندنفره → فقط خارجش کن
-            const conversations = await tx.conversation.findMany({
+            }),
+            prisma.board.findMany({
+                where: { userId: id },
+                select: { id: true },
+            }),
+            prisma.conversation.findMany({
                 where: { participants: { some: { userId: id } } },
-                select: {
-                    id: true,
-                    participants: { select: { userId: true } },
-                },
-            })
+                select: { id: true },
+            }),
+        ])
 
-            for (const conv of conversations) {
-                const others = conv.participants.filter((p) => p.userId !== id)
-                if (others.length === 0) {
-                    await tx.conversation.delete({ where: { id: conv.id } })
-                } else {
-                    await tx.conversationParticipant.deleteMany({
-                        where: { conversationId: conv.id, userId: id },
+        const pinIds = userPins.map((p) => p.id)
+        const boardIds = userBoards.map((b) => b.id)
+        const convIds = userConversations.map((c) => c.id)
+
+        await prisma.$transaction(
+            async (tx) => {
+                // ۱. پیام‌هایی که پین کاربر در آن‌ها شیر شده
+                if (pinIds.length > 0) {
+                    await tx.message.updateMany({
+                        where: { pinId: { in: pinIds } },
+                        data: { pinId: null },
                     })
                 }
+
+                // ۲. اعلان‌های مربوط به پین‌های کاربر یا خود کاربر
+                await tx.notification.deleteMany({
+                    where: {
+                        OR: [
+                            ...(pinIds.length > 0 ? [{ pinId: { in: pinIds } }] : []),
+                            { userId: id },
+                            { actorId: id },
+                        ],
+                    },
+                })
+
+                // ۳. گزارش‌ها (ریپورت روی پین‌های کاربر یا ریپورت‌های ثبت‌شده توسط کاربر)
+                await tx.report.deleteMany({
+                    where: {
+                        OR: [
+                            ...(pinIds.length > 0 ? [{ pinId: { in: pinIds } }] : []),
+                            { reporterId: id },
+                        ],
+                    },
+                })
+
+                // ۴. لایک‌ها (روی پین‌های کاربر یا لایک‌های ثبت‌شده توسط کاربر)
+                await tx.like.deleteMany({
+                    where: {
+                        OR: [
+                            ...(pinIds.length > 0 ? [{ pinId: { in: pinIds } }] : []),
+                            { userId: id },
+                        ],
+                    },
+                })
+
+                // ۵. کامنت‌ها (روی پین‌های کاربر یا کامنت‌های نوشته‌شده توسط کاربر)
+                await tx.comment.deleteMany({
+                    where: {
+                        OR: [
+                            ...(pinIds.length > 0 ? [{ pinId: { in: pinIds } }] : []),
+                            { userId: id },
+                        ],
+                    },
+                })
+
+                // ۶. سیوها (پین‌های کاربر، بردهای کاربر، یا سیوهای انجام‌شده توسط کاربر)
+                await tx.save.deleteMany({
+                    where: {
+                        OR: [
+                            ...(pinIds.length > 0 ? [{ pinId: { in: pinIds } }] : []),
+                            ...(boardIds.length > 0 ? [{ boardId: { in: boardIds } }] : []),
+                            { userId: id },
+                        ],
+                    },
+                })
+
+                // ۷. حذف ارتباط پین‌های دیگران که در بردهای این کاربر بوده‌اند
+                if (boardIds.length > 0) {
+                    await tx.pin.updateMany({
+                        where: { boardId: { in: boardIds } },
+                        data: { boardId: null },
+                    })
+                }
+
+                // ۸. پین‌های خود کاربر
+                await tx.pin.deleteMany({ where: { userId: id } })
+
+                // ۹. بردهای خود کاربر
+                await tx.board.deleteMany({ where: { userId: id } })
+
+                // ۱۰. فالوورها و فالووینگ‌ها
+                await tx.follow.deleteMany({
+                    where: { OR: [{ followerId: id }, { followingId: id }] },
+                })
+
+                // ۱۱. گفتگوها و پیام‌های کاربر
+                if (convIds.length > 0) {
+                    await tx.message.deleteMany({ where: { conversationId: { in: convIds } } })
+                    await tx.conversationParticipant.deleteMany({ where: { conversationId: { in: convIds } } })
+                    await tx.conversation.deleteMany({ where: { id: { in: convIds } } })
+                }
+                await tx.message.deleteMany({ where: { senderId: id } })
+                await tx.conversationParticipant.deleteMany({ where: { userId: id } })
+
+                // ۱۲. نقش‌های کاربر
+                await tx.userRole.deleteMany({ where: { userId: id } })
+
+                // ۱۳. در نهایت حذف خود کاربر
+                await tx.user.delete({ where: { id } })
+            },
+            {
+                maxWait: 15000,
+                timeout: 60000,
             }
+        )
 
-            // ۱۰. نقش‌های او (RBAC)
-            await tx.userRole.deleteMany({ where: { userId: id } })
-
-            // ۱۱. خود کاربر
-            await tx.user.delete({ where: { id } })
-        })
-
-        return NextResponse.json({ message: 'کاربر و همه‌ی داده‌های او حذف شد' })
+        return NextResponse.json({ message: 'کاربر و همه‌ی داده‌های او با موفقیت حذف شد' })
     } catch (error) {
         console.error('DELETE /api/admin/users/[id] error:', error)
-        return NextResponse.json({ error: 'خطا در حذف کاربر' }, { status: 500 })
+        return NextResponse.json({ error: 'خطا در حذف کاربر: ' + ((error as Error)?.message || '') }, { status: 500 })
     }
 }

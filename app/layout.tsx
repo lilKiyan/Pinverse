@@ -1,7 +1,5 @@
 import './globals.css'
-import Sidebar from './components/Sidebar'
-import Navbar from './components/Navbar'
-import MobileNav from './components/MobileNav'
+import AppShell from './components/AppShell'
 import Providers from './providers'
 import type { Metadata, Viewport } from 'next'                         
 import ServiceWorkerRegister from './components/ServiceWorkerRegister'     
@@ -109,14 +107,7 @@ export default function RootLayout({
             <body className="bg-white selection:bg-rose-600 selection:text-white text-gray-900">
                 <ServiceWorkerRegister />    
                 <Providers>
-                    <div className="flex h-dvh overflow-hidden">
-                        <Sidebar />
-                        <div className="flex-1 min-w-0 flex flex-col h-full">
-                            <Navbar />
-                            <main className="flex-1 min-h-0 overflow-y-auto">{children}</main>
-                        </div>
-                    </div>
-                    <MobileNav />
+                    <AppShell>{children}</AppShell>
                 </Providers>
             </body>
         </html>
