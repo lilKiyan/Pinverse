@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/adminAuth'
 import { rateLimit, getClientIp } from '@/lib/rateLimit'
 
-// ── GET: لیست کاربران ──
 export async function GET(request: Request) {
     try {
         const admin = await requireAdmin('users.view')
@@ -47,7 +46,6 @@ export async function GET(request: Request) {
     }
 }
 
-// ── POST: ban/unban ──
 export async function POST(request: Request) {
     try {
         const admin = await requireAdmin('users.ban')

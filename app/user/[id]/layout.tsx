@@ -75,7 +75,6 @@ export default async function UserProfileLayout({ children, params }: Props) {
             }
         }
     } catch {
-        // Fallback
     }
 
     return (

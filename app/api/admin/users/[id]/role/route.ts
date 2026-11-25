@@ -23,7 +23,6 @@ export async function POST(
             )
         }
 
-        // جلوگیری از حذف نقش ادمین توسط خودش (قفل نشدن دسترسی)
         if (id === admin.id && roleName !== 'admin') {
             return NextResponse.json(
                 { error: 'نمی‌توانید نقش مدیریت را از حساب خود بردارید' },
@@ -40,7 +39,6 @@ export async function POST(
             return NextResponse.json({ error: 'کاربر یافت نشد' }, { status: 404 })
         }
 
-        // اطمینان از وجود نقش در جدول Role
         let roleRecord = await prisma.role.findUnique({
             where: { name: roleName },
         })
@@ -55,12 +53,10 @@ export async function POST(
         }
 
         await prisma.$transaction(async (tx) => {
-            // حذف نقش‌های قبلی کاربر
             await tx.userRole.deleteMany({
                 where: { userId: id },
             })
 
-            // اگر نقش user نیست، نقش جدید اختصاص یابد
             if (roleName !== 'user' && roleRecord) {
                 await tx.userRole.create({
                     data: {

@@ -74,7 +74,6 @@ export async function POST(
             )
         }
 
-        // بررسی فالو قبلی
         const existingFollow = await prisma.follow.findFirst({
             where: {
                 followerId: user.id,

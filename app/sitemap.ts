@@ -2,12 +2,11 @@ import type { MetadataRoute } from 'next'
 import { prisma } from '@/lib/prisma'
 import { CATEGORIES } from '@/lib/categories'
 
-export const revalidate = 3600 // بازتولید خودکار نقشه سایت هر ۱ ساعت
+export const revalidate = 3600
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://pinverse.ir'
 
-    // ۱. صفحات ثابت و کلیدی
     const staticRoutes: MetadataRoute.Sitemap = [
         {
             url: siteUrl,
@@ -23,7 +22,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         },
     ]
 
-    // ۲. صفحات دسته‌بندی‌ها
     const categoryRoutes: MetadataRoute.Sitemap = CATEGORIES.map((cat) => ({
         url: `${siteUrl}/category/${cat.slug}`,
         lastModified: new Date(),
@@ -31,7 +29,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         priority: 0.85,
     }))
 
-    // ۳. صفحات پویا از دیتابیس (پین‌ها و کاربران)
     let pinRoutes: MetadataRoute.Sitemap = []
     let userRoutes: MetadataRoute.Sitemap = []
 

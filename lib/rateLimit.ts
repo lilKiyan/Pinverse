@@ -18,8 +18,8 @@ if (!globalForSweeper.__rlSweeperStarted) {
 }
 
 type RateLimitOptions = {
-    limit: number     // حداکثر تعداد درخواست
-    windowMs: number  // در هر بازه چند میلی‌ثانیه
+    limit: number
+    windowMs: number
 }
 
 export function rateLimit(
@@ -48,7 +48,6 @@ export function rateLimit(
     return { ok: true, remaining: limit - bucket.count, retryAfter: 0 }
 }
 
-// 🆔 شناسه‌ی درخواست‌دهنده — از IP
 export function getClientIp(request: Request): string {
     return (
         request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ||

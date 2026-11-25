@@ -26,6 +26,7 @@ import {
 } from 'react-icons/fi'
 import { AdminPin, CategoryRow, PinStatusFilter } from '../../types'
 import { useDragScroll } from '@/lib/useDragScroll'
+import PinCarousel from '@/app/components/PinCarousel'
 
 type AdminPinsTabProps = {
     pins: AdminPin[]
@@ -104,7 +105,6 @@ export default function AdminPinsTab({
 
     return (
         <div>
-            {/* ── نوار ابزار ۱: فیلتر وضعیت تایید (Status Toolbar) ── */}
             <div className="border-b border-gray-100 bg-[#FAFAFB] px-4 sm:px-6 py-3 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xs font-bold text-gray-500 flex items-center gap-1 shrink-0 ml-1">
@@ -185,9 +185,7 @@ export default function AdminPinsTab({
                 )}
             </div>
 
-            {/* ── نوار ابزار ۲: فیلتر دسته‌بندی و باکس جستجوی بزرگ و استاندارد (Sub-Toolbar) ── */}
             <div className="border-b border-gray-100 bg-[#FAFAFB] px-4 sm:px-6 py-3.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3.5">
-                {/* باکس جستجوی بزرگ و شاخص */}
                 <form
                     onSubmit={handleSearchSubmit}
                     className="relative flex-1 min-w-[280px] max-w-2xl group"
@@ -219,7 +217,6 @@ export default function AdminPinsTab({
                     )}
                 </form>
 
-                {/* اسلایدر جمع‌وجور دسته‌بندی‌ها با قابلیت درگ آسان موس */}
                 <div className="flex items-center gap-2 max-w-full xl:max-w-xl overflow-hidden">
                     <span className="text-xs font-bold text-gray-500 flex items-center gap-1 shrink-0 ml-1">
                         <FiTag className="h-3.5 w-3.5 text-gray-400" />
@@ -263,11 +260,10 @@ export default function AdminPinsTab({
                 </div>
             </div>
 
-            {/* ── گرید کارت‌های شکیل و جادار (حداکثر ۴ کارت در هر ردیف) ── */}
             <div className="p-4 sm:p-6">
                 {isLoading ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 animate-pulse">
-                        {Array.from({ length: 8 }).map((_, i) => (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 animate-pulse">
+                        {Array.from({ length: 6 }).map((_, i) => (
                             <div key={i} className="h-[360px] rounded-3xl bg-gray-100 ring-1 ring-gray-200/60" />
                         ))}
                     </div>
@@ -305,6 +301,18 @@ export default function AdminPinsTab({
                                 const isApproving = actionLoading === `${pin.id}:APPROVED`
                                 const isRejecting = actionLoading === `${pin.id}:REJECTED`
                                 const isActing = isApproving || isRejecting
+                                const pinSlides =
+                                    pin.images && pin.images.length > 0
+                                        ? pin.images
+                                        : [
+                                              {
+                                                  id: pin.id,
+                                                  imageUrl: pin.imageUrl,
+                                                  width: null,
+                                                  height: null,
+                                                  sortOrder: 0,
+                                              },
+                                          ]
 
                                 return (
                                     <div
@@ -319,17 +327,17 @@ export default function AdminPinsTab({
                                     >
                                         <div>
                                             <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-gray-100 ring-1 ring-black/5">
-                                                <Image
-                                                    src={pin.imageUrl}
-                                                    alt={pin.title}
-                                                    fill
-                                                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                                <PinCarousel
+                                                    images={pinSlides}
+                                                    title={pin.title}
+                                                    variant="compact"
+                                                    showThumbnails={false}
+                                                    priority={false}
                                                 />
 
                                                 <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/25 opacity-75 group-hover:opacity-90 transition-opacity" />
 
-                                                <div className="absolute top-2.5 right-2.5 flex flex-col gap-1.5 items-start z-10">
+                                                <div className="absolute top-2.5 right-2.5 flex flex-col gap-1.5 items-start z-20">
                                                     {isPending && (
                                                         <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/95 backdrop-blur-md px-2.5 py-1 text-[11px] font-black text-white shadow-md ring-1 ring-white/25">
                                                             <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
@@ -364,14 +372,14 @@ export default function AdminPinsTab({
                                                     href={`/pin/${pin.id}`}
                                                     target="_blank"
                                                     title="مشاهده پین در صفحه جدید"
-                                                    className="absolute top-2.5 left-2.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md ring-1 ring-white/25 transition-all hover:scale-105"
+                                                    className="absolute top-2.5 left-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-black/45 hover:bg-black/75 text-white backdrop-blur-md ring-1 ring-white/25 transition-all hover:scale-105"
                                                 >
                                                     <FiExternalLink className="h-3.5 w-3.5" />
                                                 </Link>
 
                                                 {pin.category && (
                                                     <span
-                                                        className="absolute bottom-2.5 right-2.5 z-10 inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-extrabold text-gray-800 shadow-sm"
+                                                        className="absolute bottom-2.5 right-2.5 z-20 inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md px-2.5 py-0.5 text-[10px] font-extrabold text-gray-800 shadow-sm"
                                                     >
                                                         <span
                                                             className="h-2 w-2 rounded-full shrink-0"
@@ -591,7 +599,6 @@ export default function AdminPinsTab({
                             })}
                         </div>
 
-                        {/* کنترل صفحه‌بندی */}
                         {totalPages > 1 && (
                             <div className="mt-6 flex items-center justify-center gap-3">
                                 <button
@@ -623,7 +630,6 @@ export default function AdminPinsTab({
                 )}
             </div>
 
-            {/* ── مودال شکیل ثبت دلیل عدم تایید پین (همراه با اسپینر لودینگ) ── */}
             {rejectingPin && (
                 <div
                     className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-[fadeIn_0.15s_ease-out]"
@@ -657,7 +663,6 @@ export default function AdminPinsTab({
                             علت عدم تایید این پین را انتخاب یا وارد کنید تا به صورت خودکار برای کاربر ارسال شود:
                         </p>
 
-                        {/* دلایل سریع */}
                         <div className="mt-3 space-y-1.5">
                             {quickRejectReasons.map((reason, idx) => (
                                 <button
@@ -676,7 +681,6 @@ export default function AdminPinsTab({
                             ))}
                         </div>
 
-                        {/* دلیل دلخواه */}
                         <div className="mt-3">
                             <label className="block text-[11px] font-bold text-gray-600 mb-1">
                                 یا دلیل سفارشی خود را بنویسید:

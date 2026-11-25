@@ -16,7 +16,6 @@ export default function AdminNavbar({ stats, isRefreshing, onRefresh }: AdminNav
         <header className="sticky top-0 z-40 w-full border-b border-gray-200/80 bg-white/95 backdrop-blur-md shadow-xs">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="flex h-16 items-center justify-between gap-3">
-                    {/* راست: لوگوی پنل، نام برند و دکمه بازگشت به سایت */}
                     <div className="flex items-center gap-3">
                         <Link
                             href="/"
@@ -49,7 +48,6 @@ export default function AdminNavbar({ stats, isRefreshing, onRefresh }: AdminNav
                         </div>
                     </div>
 
-                    {/* چپ: وضعیت سیستم و دکمه رفرش */}
                     <div className="flex items-center gap-2">
                         {stats && (
                             <div className="hidden md:flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-200/70">

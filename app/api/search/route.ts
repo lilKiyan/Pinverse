@@ -35,6 +35,9 @@ export async function GET(request: Request) {
                 category: {
                     select: { slug: true, name: true, icon: true, color: true },
                 },
+                _count: {
+                    select: { images: true },
+                },
             },
         })
 
@@ -48,6 +51,7 @@ export async function GET(request: Request) {
                 imageWidth: pin.imageWidth,
                 imageHeight: pin.imageHeight,
                 imageUrl: pin.imageUrl,
+                imagesCount: Math.max(1, pin._count.images),
                 createdAt: pin.createdAt,
                 updatedAt: pin.updatedAt,
                 userId: pin.userId,

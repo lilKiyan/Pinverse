@@ -127,28 +127,23 @@ export async function DELETE(
         }
 
         await prisma.$transaction(async (tx) => {
-            // گزارش‌های این پین (ریشه P2003 — Report_pinId_fkey)
             await tx.report.deleteMany({
                 where: { pinId: id },
             })
 
-            // نوتیف‌های اشاره‌کننده به این پین
             await tx.notification.deleteMany({
                 where: { pinId: id },
             })
 
-            // پیام‌های چتی که این پین را حمل می‌کنند → detach (تاریخچه چت حفظ شود)
             await tx.message.updateMany({
                 where: { pinId: id },
                 data: { pinId: null },
             })
 
-            // وابستگی‌های کلاسیک
             await tx.save.deleteMany({ where: { pinId: id } })
             await tx.like.deleteMany({ where: { pinId: id } })
             await tx.comment.deleteMany({ where: { pinId: id } })
 
-            // خود پین
             await tx.pin.delete({ where: { id } })
         })
 
@@ -193,6 +188,16 @@ export async function GET(
                 category: {                         
                     select: { slug: true, name: true, icon: true, color: true },
                 },
+                images: {
+                    orderBy: { sortOrder: 'asc' },
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                        width: true,
+                        height: true,
+                        sortOrder: true,
+                    },
+                },
                 likes: true,
                 comments: true,
             },
@@ -205,7 +210,6 @@ export async function GET(
             )
         }
 
-        // اگر پین هنوز تایید نشده، فقط خود سازنده و مدیران اجازه مشاهده دارند
         if (pin.status !== 'APPROVED') {
             const isOwner = Boolean(user && user.id === pin.userId)
             let isAdmin = false
@@ -234,11 +238,28 @@ export async function GET(
 
         const userSaves = user ? pin.saves.filter((s) => s.userId === user.id) : []
 
+        const pinImages =
+            pin.images && pin.images.length > 0
+                ? pin.images
+                : [
+                      {
+                          id: pin.id,
+                          imageUrl: pin.imageUrl,
+                          width: pin.imageWidth,
+                          height: pin.imageHeight,
+                          sortOrder: 0,
+                      },
+                  ]
+
         const pinData = {
             id: pin.id,
             title: pin.title,
             description: pin.description,
             imageUrl: pin.imageUrl,
+            imageWidth: pin.imageWidth,
+            imageHeight: pin.imageHeight,
+            images: pinImages,
+            imagesCount: pinImages.length,
             link: pin.link,
             status: pin.status,
             rejectionReason: pin.rejectionReason,

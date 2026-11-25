@@ -49,9 +49,7 @@ export default function AdminRolesTab({
 
     return (
         <div className="p-4 sm:p-5 space-y-6">
-            {/* کارت‌های خلاصه نقش‌ها */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* مدیر ارشد */}
                 <div className="rounded-2xl border border-red-200/80 bg-gradient-to-br from-red-50/60 to-white p-5 shadow-2xs">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-white shadow-sm shadow-red-500/20">
@@ -73,7 +71,6 @@ export default function AdminRolesTab({
                     </div>
                 </div>
 
-                {/* ناظر محتوا */}
                 <div className="rounded-2xl border border-blue-200/80 bg-gradient-to-br from-blue-50/60 to-white p-5 shadow-2xs">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm shadow-blue-500/20">
@@ -95,7 +92,6 @@ export default function AdminRolesTab({
                     </div>
                 </div>
 
-                {/* کاربر عادی */}
                 <div className="rounded-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-5 shadow-2xs">
                     <div className="flex items-center justify-between mb-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-700 text-white shadow-sm">
@@ -118,7 +114,6 @@ export default function AdminRolesTab({
                 </div>
             </div>
 
-            {/* اعضای تیم مدیریت و نظارت */}
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-2xs">
                 <div className="flex items-center justify-between mb-4">
                     <div>
@@ -199,7 +194,6 @@ export default function AdminRolesTab({
                 )}
             </div>
 
-            {/* ماتریس مجوزهای دسترسی سیستم */}
             <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-2xs">
                 <div className="flex items-center gap-2 mb-3">
                     <FiKey className="h-4 w-4 text-gray-700" />

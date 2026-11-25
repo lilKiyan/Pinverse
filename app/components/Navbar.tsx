@@ -60,7 +60,6 @@ const Navbar = () => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false)
   const [isDropdownVisible, setIsDropdownVisible] = useState(false)
 
-  // ── جستجوی لایو ──
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -77,12 +76,11 @@ const Navbar = () => {
       const data = await res.json()
       return data.user
     },
-    enabled: !user, // فقط وقتی کاربر در store نیست
-    staleTime: Infinity, // کاربر تغییر نمی‌کنه مگر با لاگین/خروج
-    retry: false, // اگه 401 داد، دوباره تلاش نکن
+    enabled: !user,
+    staleTime: Infinity,
+    retry: false,
   })
 
-  // sync کردن fetchedUser با Zustand
   useEffect(() => {
     if (fetchedUser) setUser(fetchedUser)
   }, [fetchedUser, setUser])
@@ -94,8 +92,8 @@ const Navbar = () => {
       if (!res.ok) return []
       return res.json()
     },
-    enabled: !!user, // فقط کاربر لاگین‌شده
-    staleTime: 60 * 1000, // ۱ دقیقه تازه
+    enabled: !!user,
+    staleTime: 60 * 1000,
   })
 
   const { data: searchData, isFetching: isSearching } = useQuery({
@@ -124,14 +122,13 @@ const Navbar = () => {
       }
     },
     enabled: !!debouncedQuery,
-    staleTime: 2 * 60 * 1000, // نتایج جستجو ۲ دقیقه کش
-    placeholderData: (prev) => prev, // نگه داشتن نتایج قبلی موقع typing
+    staleTime: 2 * 60 * 1000,
+    placeholderData: (prev) => prev,
   })
 
   const pinSuggestions = searchData?.pins ?? []
   const userSuggestions = searchData?.users ?? []
 
-  // debounce کردن searchQuery → debouncedQuery
   useEffect(() => {
     if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
 
@@ -188,7 +185,6 @@ const Navbar = () => {
     return () => window.removeEventListener('scroll', handleScroll, true)
   }, [isDropdownOpen])
 
-  // ── بستن دراپ‌داون پروفایل با کلیک/لمس بیرون ──
   useEffect(() => {
     if (!isDropdownOpen) return
 
@@ -207,7 +203,6 @@ const Navbar = () => {
     }
   }, [isDropdownOpen])
 
-  // ── بستن پیشنهادها با کلیک بیرون ──
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
@@ -219,7 +214,6 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // باز کردن خودکار باکس پیشنهادها
   useEffect(() => {
     if (searchQuery.trim()) {
       setShowSuggestions(true)
@@ -227,7 +221,6 @@ const Navbar = () => {
     setHighlightedIndex(-1)
   }, [searchQuery])
 
-  // ── ناوبری ──
   const flatItems: FlatItem[] = [
     ...userSuggestions.map((u) => ({ type: 'user' as const, id: u.id, data: u })),
     ...pinSuggestions.map((p) => ({ type: 'pin' as const, id: p.id, data: p })),
@@ -334,7 +327,6 @@ const Navbar = () => {
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-100">
       <div className="flex items-center justify-between px-3 md:px-4 h-14 md:h-16 gap-3 md:gap-4">
-        {/* ═══ جستجوی لایو ═══ */}
         <div ref={searchContainerRef} className="relative flex-1 w-full min-w-0">
           <form
             onSubmit={(e) => {

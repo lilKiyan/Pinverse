@@ -77,7 +77,6 @@ export default function AdminPage() {
         toastTimerRef.current = setTimeout(() => setToast(null), 3500)
     }
 
-    // ── کوئری‌ها ──
     const {
         data: statsData,
         isLoading: loadingStats,

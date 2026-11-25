@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { rateLimit, getClientIp } from '@/lib/rateLimit'   // ✅ جدید
+import { rateLimit, getClientIp } from '@/lib/rateLimit'
 
 export async function POST(
     request: Request,
@@ -29,7 +29,6 @@ export async function POST(
         const body = await request.json()
         const { recipientIds } = body as { recipientIds?: string[] }
 
-        // ── ولیدیشن ورودی ──
         if (!Array.isArray(recipientIds) || recipientIds.length === 0) {
             return NextResponse.json(
                 { error: 'حداقل یک گیرنده لازم است' },
@@ -37,7 +36,6 @@ export async function POST(
             )
         }
 
-        // سقف تعداد — ضد اسپم/فشار سرور
         const uniqueRecipients = [...new Set(recipientIds)]
         if (uniqueRecipients.length > 10) {
             return NextResponse.json(
@@ -46,7 +44,6 @@ export async function POST(
             )
         }
 
-        // ── پین باید وجود داشته باشد ──
         const pin = await prisma.pin.findUnique({
             where: { id },
             select: { id: true, title: true, imageUrl: true, userId: true },
@@ -59,7 +56,6 @@ export async function POST(
             )
         }
 
-        // ── گارد رابطه: هر گیرنده یا چت دارد یا فالوشده است ──
         const [chatRecipients, followedIds] = await Promise.all([
             prisma.conversation.findMany({
                 where: {
@@ -101,7 +97,6 @@ export async function POST(
             )
         }
 
-        // ── برای هر گیرنده: پیدا/ساخت گفتگو + ارسال پیام پین‌دار ──
         const results = await Promise.all(
             validRecipients.map(async (recipientId) => {
                 let conversation = await prisma.conversation.findFirst({

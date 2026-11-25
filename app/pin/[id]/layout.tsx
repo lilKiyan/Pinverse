@@ -120,7 +120,6 @@ export default async function PinDetailLayout({ children, params }: Props) {
             }
         }
     } catch {
-        // Fallback
     }
 
     return (

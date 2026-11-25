@@ -1,7 +1,3 @@
-// ═══════════════════════════════════════════════
-// 📏 قوانین اعتبارسنجی (بدون کتابخانه)
-// ═══════════════════════════════════════════════
-
 export const RULES = {
     NAME: { min: 2, max: 50 },
     USERNAME: { min: 3, max: 20 },
@@ -9,24 +5,20 @@ export const RULES = {
     EMAIL_MAX: 254,
 }
 
-// ─── اعتبارسنجی ایمیل ───
 export function validateEmail(email: string): string | null {
     const trimmed = email.trim().toLowerCase()
     if (!trimmed) return 'ایمیل الزامی است'
     if (trimmed.length > RULES.EMAIL_MAX) return 'ایمیل بیش از حد طولانی است'
 
-    // regex استاندارد ایمیل
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
     if (!emailRegex.test(trimmed)) return 'فرمت ایمیل نامعتبر است'
 
-    // چک کردن دامنه‌های معروف (جلوگیری از ایمیل الکی)
     const domain = trimmed.split('@')[1]
     if (domain.length < 3 || !domain.includes('.')) return 'ایمیل نامعتبر است'
 
     return null
 }
 
-// ─── اعتبارسنجی نام کاربری ───
 export function validateUsername(username: string): string | null {
     const trimmed = username.trim()
     if (!trimmed) return 'نام کاربری الزامی است'
@@ -35,16 +27,13 @@ export function validateUsername(username: string): string | null {
     if (trimmed.length > RULES.USERNAME.max)
         return `نام کاربری باید حداکثر ${RULES.USERNAME.max} کاراکتر باشد`
 
-    // فقط حروف کوچیک انگلیسی، عدد، آندرلاین
     const usernameRegex = /^[a-z0-9_]+$/
     if (!usernameRegex.test(trimmed))
         return 'نام کاربری فقط می‌تواند شامل حروف انگلیسی کوچک، عدد و _ باشد'
 
-    // شروع نشه با عدد
     if (/^[0-9]/.test(trimmed))
         return 'نام کاربری نمی‌تواند با عدد شروع شود'
 
-    // کلمات رزرو شده
     const reserved = ['admin', 'api', 'login', 'register', 'user', 'root', 'system', 'support', 'help']
     if (reserved.includes(trimmed.toLowerCase()))
         return 'این نام کاربری قابل استفاده نیست'
@@ -52,7 +41,6 @@ export function validateUsername(username: string): string | null {
     return null
 }
 
-// ─── اعتبارسنجی نام کامل ───
 export function validateName(name: string): string | null {
     const trimmed = name.trim()
     if (!trimmed) return 'نام الزامی است'
@@ -63,7 +51,6 @@ export function validateName(name: string): string | null {
     return null
 }
 
-// ─── اعتبارسنجی رمز عبور ───
 export function validatePassword(password: string): string | null {
     if (!password) return 'رمز عبور الزامی است'
     if (password.length < RULES.PASSWORD.min)
@@ -77,7 +64,6 @@ export function validatePassword(password: string): string | null {
     if (!/[!@#$%^&*()_\-+=\[\]{};:'"\\|,.<>\/?]/.test(password))
         return 'رمز عبور باید شامل حداقل یک علامت خاص (!@#$%...) باشد'
 
-    // چک کردن رمزهای رایج
     const commonPasswords = ['password', '12345678', 'qwerty123', 'admin123', 'password1']
     if (commonPasswords.includes(password.toLowerCase()))
         return 'این رمز عبور بسیار رایج است، لطفاً رمز دیگری انتخاب کنید'
@@ -85,7 +71,6 @@ export function validatePassword(password: string): string | null {
     return null
 }
 
-// ─── محاسبه قدرت رمز (0 تا 4) ───
 export function getPasswordStrength(password: string): {
     score: number
     label: string
@@ -101,7 +86,6 @@ export function getPasswordStrength(password: string): {
     if (/[0-9]/.test(password)) score++
     if (/[!@#$%^&*()_\-+=\[\]{};:'"\\|,.<>\/?]/.test(password)) score++
 
-    // نرمال‌سازی به 0-4
     const normalized = Math.min(4, Math.floor(score * 4 / 5))
 
     const map = {
@@ -115,7 +99,6 @@ export function getPasswordStrength(password: string): {
     return { score: normalized, ...map[normalized as keyof typeof map] }
 }
 
-// ─── نرمال‌سازی یوزرنیم (تبدیل به lowercase) ───
 export function normalizeUsername(username: string): string {
     return username.trim().toLowerCase()
 }
@@ -124,9 +107,6 @@ export function normalizeEmail(email: string): string {
     return email.trim().toLowerCase()
 }
 
-// ═══════════════════════════════════════════════
-// 📝 محدودیت‌های محتوا
-// ═══════════════════════════════════════════════
 export const CONTENT_LIMITS = {
     COMMENT: 500,
     MESSAGE: 2000,

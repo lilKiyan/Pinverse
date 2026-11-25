@@ -12,7 +12,6 @@ export async function GET(
         const { id } = await params
         const viewer = await getCurrentUser()
 
-        // ── کاربر هدف باید وجود داشته باشد ──
         const targetUser = await prisma.user.findUnique({
             where: { id },
             select: { id: true, name: true, username: true, banned: true, avatar: true },
@@ -25,39 +24,34 @@ export async function GET(
             )
         }
 
-        // ── پارامترها ──
         const { searchParams } = new URL(request.url)
         const type = searchParams.get('type') === 'following' ? 'following' : 'followers'
         const cursor = searchParams.get('cursor')
 
-        // ── شرط بر اساس نوع ──
         const whereCondition =
             type === 'followers'
-                ? { followingId: id }        // کسانی که «او» را فالو کرده‌اند
-                : { followerId: id }         // کسانی که «او» فالو کرده
+                ? { followingId: id }
+                : { followerId: id }
 
-        // ── واکشی لیست ──
         const connections = await prisma.follow.findMany({
             where: whereCondition,
             orderBy: { createdAt: 'desc' },
             take: LIMIT + 1,
             ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
             include: {
-                follower: {                    // ✅ رابطه
+                follower: {
                     select: { id: true, name: true, username: true, avatar: true },
                 },
-                following: {                   // ✅ رابطه
+                following: {
                     select: { id: true, name: true, username: true, avatar: true },
                 },
             },
         })
 
-        // ── استخراج کاربرها از رابطه‌ها ──
         const users = connections.map((rel) =>
             type === 'followers' ? rel.follower : rel.following
         )
 
-        // ── آیا viewer (من) این‌ها را فالو کرده‌ام؟ — یک کوئری، نه N! ──
         let followedByMeIds = new Set<string>()
 
         if (viewer && users.length > 0) {

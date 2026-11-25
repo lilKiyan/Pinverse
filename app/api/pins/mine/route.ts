@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getCurrentUser } from '@/lib/auth'   // ← اضافه شود
+import { getCurrentUser } from '@/lib/auth'
 
 export async function GET() {
     try {
@@ -21,8 +21,11 @@ export async function GET() {
                     where: { userId: user.id },
                     include: { board: true },
                 },
-                category: {                       // ✅
+                category: {
                     select: { slug: true, name: true, icon: true, color: true },
+                },
+                _count: {
+                    select: { images: true },
                 },
             },
         })
@@ -36,6 +39,7 @@ export async function GET() {
                 imageHeight: pin.imageHeight,
                 description: pin.description,
                 imageUrl: pin.imageUrl,
+                imagesCount: Math.max(1, pin._count.images),
                 createdAt: pin.createdAt,
                 updatedAt: pin.updatedAt,
                 userId: pin.userId,

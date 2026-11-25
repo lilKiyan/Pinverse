@@ -3,15 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import type { Prisma } from '@prisma/client'
 
-// نرمال‌سازی متن فارسی (یکسان‌سازی حروف عربی و فارسی)
 function normalizeText(text: string): string {
   return text
     .toLowerCase()
     .trim()
-    .replace(/ي/g, 'ی') // ي عربی → ی فارسی
-    .replace(/ك/g, 'ک') // ك عربی → ک فارسی
-    .replace(/\u200c/g, ' ') // نیم‌فاصله → فاصله
-    .replace(/\s+/g, ' ') // چند فاصله پشت‌سرهم → یک فاصله
+    .replace(/ي/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/\u200c/g, ' ')
+    .replace(/\s+/g, ' ')
 }
 
 export async function GET(request: Request) {
@@ -24,14 +23,12 @@ export async function GET(request: Request) {
       return NextResponse.json({ users: [] })
     }
 
-    // اگه با @ شروع شده بود، حذفش کن (مثلاً @kiyan → kiyan)
     if (q.startsWith('@')) {
       q = q.slice(1)
     }
 
     const qNormalized = normalizeText(q)
 
-    // جستجوی مستقیم در دیتابیس به جای لود تمام کاربران در رم سرور
     const searchConditions: Prisma.UserWhereInput[] = [
       { username: { contains: q, mode: 'insensitive' } },
       { name: { contains: q, mode: 'insensitive' } },
@@ -58,14 +55,13 @@ export async function GET(request: Request) {
         avatar: true,
         bio: true,
         _count: {
-          select: { following: true }, // تعداد دنبال‌کنندگان
+          select: { following: true },
         },
       },
       take: 20,
       orderBy: { username: 'asc' },
     })
 
-    // بررسی وضعیت فالو فقط برای کاربران پیدا شده
     let followingIds = new Set<string>()
     if (currentUser && matchedUsers.length > 0) {
       const follows = await prisma.follow.findMany({

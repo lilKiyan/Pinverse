@@ -6,7 +6,6 @@ import { createNotification } from '@/lib/notifications'
 import { rateLimit, getClientIp } from '@/lib/rateLimit'
 import { moderateText } from '@/lib/moderation'
 
-// دریافت کامنت‌های یک پین
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -38,7 +37,6 @@ export async function GET(
     }
 }
 
-// افزودن کامنت جدید
 export async function POST(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -65,7 +63,6 @@ export async function POST(
         const body = await request.json()
         const { content } = body
 
-        // ۱. خالی نبودن
         if (!content || !content.trim()) {
             return NextResponse.json(
                 { error: 'متن کامنت نمی‌تواند خالی باشد' },
@@ -75,7 +72,6 @@ export async function POST(
 
         const trimmed = content.trim()
 
-        // ۲. اعتبارسنجی طول کامنت (قبل از ساخت)
         const contentError = validateCommentLength(trimmed)
         if (contentError) {
             return NextResponse.json({ error: contentError }, { status: 400 })
@@ -86,7 +82,6 @@ export async function POST(
             return NextResponse.json({ error: moderation.reason }, { status: 400 })
         }
 
-        // ۳. بررسی وجود پین
         const pin = await prisma.pin.findUnique({
             where: { id },
             select: { id: true, userId: true, title: true },
@@ -98,7 +93,6 @@ export async function POST(
             )
         }
 
-        // ۴. ساخت کامنت
         const newComment = await prisma.comment.create({
             data: {
                 content: trimmed,
@@ -125,7 +119,6 @@ export async function POST(
             pinTitle: pin.title,
         })
 
-        // ۵. برگرداندن کامنت ساخته‌شده
         return NextResponse.json({ comment: newComment }, { status: 201 })
     } catch (error) {
         console.error('POST /api/pins/[id]/comments error:', error)

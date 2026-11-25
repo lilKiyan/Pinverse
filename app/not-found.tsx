@@ -4,17 +4,14 @@ import { FiArrowRight, FiSearch, FiMapPin } from 'react-icons/fi'
 export default function NotFound() {
     return (
         <main className="relative min-h-screen bg-white flex flex-col items-center justify-center px-4 overflow-hidden">
-            {/* بلاب‌های گرادیانت تزئینی پس‌زمینه */}
             <div className="absolute -top-24 -right-24 w-80 h-80 bg-red-100 rounded-full blur-3xl opacity-60" />
             <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-orange-50 rounded-full blur-3xl opacity-70" />
 
-            {/* پین‌های شناور تزئینی */}
             <FiMapPin className="pin-float pin-float-1 absolute top-[18%] left-[14%] w-6 h-6 text-red-200" />
             <FiMapPin className="pin-float pin-float-2 absolute top-[28%] right-[16%] w-8 h-8 text-red-100" />
             <FiMapPin className="pin-float pin-float-3 absolute bottom-[22%] left-[20%] w-5 h-5 text-orange-200" />
             <FiMapPin className="pin-float pin-float-1 absolute bottom-[30%] right-[12%] w-7 h-7 text-red-200" />
 
-            {/* کد ۴۰۴ */}
             <div className="relative z-10">
                 <h1 className="text-9xl md:text-[12rem] font-black bg-gradient-to-b from-gray-200 to-gray-100 bg-clip-text text-transparent select-none tracking-tight">
                     404
@@ -26,7 +23,6 @@ export default function NotFound() {
                 </div>
             </div>
 
-            {/* پیام */}
             <div className="relative z-10 text-center -mt-2 md:-mt-4">
                 <h2 className="text-2xl md:text-4xl font-bold text-gray-900 mb-3">
                     صفحه‌ای که دنبالش بودی پیدا نشد
@@ -46,7 +42,6 @@ export default function NotFound() {
                 </div>
             </div>
 
-            {/* الگوی تزئینی پایین */}
             <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-red-200 to-transparent" />
 
             <style>{`

@@ -67,11 +67,20 @@ export type RolesData = {
     totalUsers: number
 }
 
+export type AdminPinImage = {
+    id: string
+    imageUrl: string
+    width: number | null
+    height: number | null
+    sortOrder: number
+}
+
 export type AdminPin = {
     id: string
     title: string
     description: string | null
     imageUrl: string
+    images?: AdminPinImage[]
     status: 'PENDING' | 'APPROVED' | 'REJECTED'
     rejectionReason?: string | null
     createdAt: string

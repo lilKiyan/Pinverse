@@ -16,7 +16,6 @@ function LoginForm() {
   const setUser = useAuthStore((state) => state.setUser)
 
   const redirectParam = searchParams.get('redirect')
-  // امن‌سازی آدرس ریدایرکت (فقط مسیرهای داخلی مجازند)
   const targetUrl = redirectParam && redirectParam.startsWith('/') && !redirectParam.startsWith('//')
     ? redirectParam
     : '/'

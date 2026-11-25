@@ -2,15 +2,6 @@
 
 import { useEffect, useRef } from 'react'
 
-/**
- * هوک فوق‌بهینه برای درگ کردن المان‌های اسکرولی با ماوس (Drag to Scroll)
- * ویژگی‌ها:
- * ۱. پشتیبانی کامل و بی‌نقص از جهت راست‌به‌چپ (RTL) و چپ‌به‌راست (LTR)
- * ۲. اجرای ۶۰ تا ۱۲۰ فریم بر ثانیه با شتاب و اینرسی نرم (Momentum)
- * ۳. جلوگیری هوشمند از کلیک ناخواسته روی دکمه‌ها و لینک‌ها پس از درگ
- * ۴. جلوگیری از درگ پیش‌فرض مرورگر (HTML5 dragstart) روی المان‌های داخلی
- * ۵. تبدیل غلتک ماوس (Wheel) به اسکرول افقی روان
- */
 export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
     const ref = useRef<T | null>(null)
     const isDownRef = useRef(false)
@@ -24,9 +15,8 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
         const el = ref.current
         if (!el) return
 
-        // ── ۱. شروع درگ ──
         const onMouseDown = (e: MouseEvent) => {
-            if (e.button !== 0) return // فقط کلیک چپ
+            if (e.button !== 0) return
             isDownRef.current = true
             hasDraggedRef.current = false
             startXRef.current = e.clientX
@@ -41,7 +31,6 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
             el.classList.add('cursor-grabbing', 'select-none')
         }
 
-        // ── ۲. حرکت ماوس با کشیدن طبیعی محتوا همگام با جهت ماوس ──
         const onMouseMove = (e: MouseEvent) => {
             if (!isDownRef.current) return
 
@@ -53,11 +42,9 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
                 hasDraggedRef.current = true
             }
 
-            // کشیدن به راست محتوا را به راست می‌برد، کشیدن به چپ به چپ
             el.scrollLeft -= deltaX
         }
 
-        // ── ۳. رها کردن ماوس با اینرسی ملایم ──
         const onMouseUp = () => {
             if (!isDownRef.current) return
             isDownRef.current = false
@@ -69,7 +56,7 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
             const stepInertia = () => {
                 if (Math.abs(vel) > 0.4) {
                     el.scrollLeft -= vel
-                    vel *= 0.92 // اصطکاک نرم
+                    vel *= 0.92
                     animIdRef.current = requestAnimationFrame(stepInertia)
                 } else {
                     animIdRef.current = null
@@ -80,13 +67,11 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
                 animIdRef.current = requestAnimationFrame(stepInertia)
             }
 
-            // بازنشانی وضعیت درگ بعد از پایان رویداد کلیک
             setTimeout(() => {
                 hasDraggedRef.current = false
             }, 100)
         }
 
-        // ── ۴. تبدیل غلتک عمودی ماوس به اسکرول افقی طبیعی ──
         const onWheel = (e: WheelEvent) => {
             if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
                 e.preventDefault()
@@ -94,12 +79,10 @@ export function useDragScroll<T extends HTMLElement = HTMLDivElement>() {
             }
         }
 
-        // ── ۵. بلاک کردن درگ بومی مرورگر روی عکس‌ها و لینک‌ها ──
         const onDragStart = (e: DragEvent) => {
             e.preventDefault()
         }
 
-        // ── ۶. بلاک کردن کلیک در فاز Capture اگر درگ اتفاق افتاده باشد ──
         const onClickCapture = (e: MouseEvent) => {
             if (hasDraggedRef.current) {
                 e.preventDefault()

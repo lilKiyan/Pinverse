@@ -5,7 +5,7 @@ import Image from 'next/image'
 import dynamic from 'next/dynamic'
 import { useState, useMemo, useCallback, memo } from 'react'
 import { useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query'
-import { FiUpload, FiCheckCircle, FiFolder, FiEyeOff, FiRotateCcw, FiShare2 } from 'react-icons/fi'
+import { FiUpload, FiCheckCircle, FiFolder, FiEyeOff, FiRotateCcw, FiShare2, FiLayers } from 'react-icons/fi'
 import type { Board } from './SaveToBoardDropdown'
 import type { OptionKey } from './PinOptionsMenu'
 import type { PinDTO } from '../types/pin'
@@ -337,6 +337,24 @@ const PinCard = memo(({
                             className="object-cover group-hover:brightness-75 transition-all duration-300"
                             priority={priority}
                         />
+
+                        {(pin.imagesCount ?? 1) > 1 && (
+                            <span
+                                className="absolute top-2 left-2 z-10
+                                    inline-flex items-center gap-1
+                                    bg-black/55 backdrop-blur-md
+                                    text-white text-[10px] font-extrabold
+                                    px-2 py-0.5 rounded-full
+                                    ring-1 ring-white/25 shadow-sm
+                                    transition-all duration-200
+                                    group-hover:opacity-0"
+                            >
+                                <FiLayers className="w-3 h-3" />
+                                <span className="tabular-nums">
+                                    {(pin.imagesCount ?? 1).toLocaleString('fa-IR')}
+                                </span>
+                            </span>
+                        )}
 
                         {category && CategoryIcon && (
                             <span

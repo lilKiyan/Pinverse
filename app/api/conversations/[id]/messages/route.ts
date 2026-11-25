@@ -6,7 +6,6 @@ import { createNotification } from '@/lib/notifications'
 import { rateLimit, getClientIp } from '@/lib/rateLimit'
 import { moderateText } from '@/lib/moderation'   
 
-// دریافت پیام‌های یک گفتگو
 export async function GET(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -22,7 +21,6 @@ export async function GET(
 
         const { id } = await params
 
-        // بررسی اینکه کاربر عضو این گفتگو باشد
         const participant = await prisma.conversationParticipant.findUnique({
             where: {
                 conversationId_userId: {
@@ -72,13 +70,11 @@ export async function GET(
     }
 }
 
-// ارسال پیام جدید
 export async function POST(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        // 🛡️ حداکثر ۱۰ پیام در دقیقه
         const rl = rateLimit(getClientIp(request), { limit: 10, windowMs: 60_000 })
         if (!rl.ok) {
             return NextResponse.json(
@@ -130,13 +126,11 @@ export async function POST(
             return NextResponse.json({ error: contentError }, { status: 400 })
         }
 
-        // 🛡️ فیلتر محتوا — لینک آزاد است (پیام چت، حتی share پین)
         const moderation = moderateText(trimmed, true)
         if (!moderation.ok) {
             return NextResponse.json({ error: moderation.reason }, { status: 400 })
         }
 
-        // ── ساخت پیام ──
         const newMessage = await prisma.message.create({
             data: {
                 conversationId: id,

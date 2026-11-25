@@ -2,14 +2,13 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { createNotification, removeNotification } from '@/lib/notifications'
-import { rateLimit, getClientIp } from '@/lib/rateLimit'   // ✅ جدید
+import { rateLimit, getClientIp } from '@/lib/rateLimit'
 
 export async function POST(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        // 🛡️ حداکثر ۳۰ لایک/آنلایک در دقیقه — اکشن پرتکرار، سقف طبیعی انسان
         const rl = rateLimit(getClientIp(request), { limit: 30, windowMs: 60_000 })
         if (!rl.ok) {
             return NextResponse.json(
@@ -29,7 +28,6 @@ export async function POST(
 
         const { id } = await params
 
-        // بررسی وجود پین — فقط فیلدهای لازم (بهینه)
         const pin = await prisma.pin.findUnique({
             where: { id },
             select: { userId: true, title: true },
@@ -41,7 +39,6 @@ export async function POST(
             )
         }
 
-        // پیدا کردن لایک قبلی کاربر
         const existingLike = await prisma.like.findFirst({
             where: {
                 userId: user.id,
@@ -52,13 +49,11 @@ export async function POST(
         let isLiked: boolean
 
         if (existingLike) {
-            // حذف لایک
             await prisma.like.delete({
                 where: { id: existingLike.id },
             })
             isLiked = false
 
-            // 🔔 آنلایک → نوتیف نخونده حذف می‌شود
             await removeNotification({
                 type: 'like',
                 recipientId: pin.userId,
@@ -66,7 +61,6 @@ export async function POST(
                 pinId: id,
             })
         } else {
-            // ثبت لایک
             await prisma.like.create({
                 data: {
                     userId: user.id,

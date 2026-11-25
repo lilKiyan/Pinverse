@@ -357,7 +357,6 @@ export default function RegisterPage() {
     )
 }
 
-// ─── کامپوننت Input قابل استفاده مجدد ───
 function InputField({
     id,
     label,

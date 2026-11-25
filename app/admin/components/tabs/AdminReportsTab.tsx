@@ -45,7 +45,6 @@ export default function AdminReportsTab({
 
     return (
         <div>
-            {/* نوار فیلتر و جستجوی اختصاصی گزارش‌ها */}
             <div className="border-b border-gray-100 bg-[#FAFAFB] px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-gray-700">
@@ -84,7 +83,6 @@ export default function AdminReportsTab({
                 </div>
             </div>
 
-            {/* لیست گزارش‌ها */}
             <div className="p-4 sm:p-5">
                 {isLoading ? (
                     <div className="space-y-3 animate-pulse">

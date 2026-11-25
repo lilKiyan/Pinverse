@@ -30,7 +30,6 @@ export async function DELETE(
             )
         }
 
-        // فقط مالک کامنت یا مالک پین می‌توانند حذف کنند
         if (comment.userId !== user.id && comment.pin.userId !== user.id) {
             return NextResponse.json(
                 { error: 'شما مجاز به حذف این کامنت نیستید' },

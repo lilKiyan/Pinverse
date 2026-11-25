@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams, useRouter } from 'next/navigation'
 import { useAuthStore } from '@/lib/authStore'
@@ -10,6 +10,8 @@ import dynamic from 'next/dynamic'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import Spinner from '@/app/components/Spinner'
 import PinDetailSkeleton from '@/app/components/skeletons/PinDetailSkeleton'
+import PinCarousel from '@/app/components/PinCarousel'
+import type { PinImageDTO } from '@/app/types/pin'
 import { getCategoryIcon } from '@/lib/categories'
 
 const SharePinModal = dynamic(() => import('@/app/components/SharePinModal'), { ssr: false })
@@ -69,6 +71,8 @@ type PinResponse = {
         imageUrl: string
         imageWidth?: number
         imageHeight?: number
+        images?: PinImageDTO[]
+        imagesCount?: number
         createdAt: string
         userId: string
         isOwner: boolean
@@ -119,6 +123,7 @@ export default function PinDetailPage() {
     }, [loginAction])
     const [isDownloading, setIsDownloading] = useState(false)
     const [isShareModalOpen, setIsShareModalOpen] = useState(false)
+    const [activeSlideIndex, setActiveSlideIndex] = useState(0)
 
     const ACTION_CONFIG: Record<Exclude<LoginAction, null>, {
         icon: any
@@ -162,7 +167,6 @@ export default function PinDetailPage() {
         },
     }
 
-
     const {
         data: pinData,
         isLoading: loading,
@@ -183,6 +187,24 @@ export default function PinDetailPage() {
     const savedBoards = pin?.savedBoards ?? []
     const isLiked = pin?.isLikedByMe ?? false
     const totalLikes = pin?.totalLikes ?? 0
+
+    const pinImages = useMemo<PinImageDTO[]>(() => {
+        if (!pin) return []
+        if (pin.images && pin.images.length > 0) return pin.images
+        return [
+            {
+                id: pin.id,
+                imageUrl: pin.imageUrl,
+                width: pin.imageWidth ?? null,
+                height: pin.imageHeight ?? null,
+                sortOrder: 0,
+            },
+        ]
+    }, [pin])
+
+    const handleSlideChange = useCallback((idx: number) => {
+        setActiveSlideIndex(idx)
+    }, [])
 
     const { data: boardsRaw = [], isLoading: loadingBoards } = useQuery<any[]>({
         queryKey: ['boards'],
@@ -229,7 +251,6 @@ export default function PinDetailPage() {
 
     const isFollowed = followData?.isFollowing ?? false
     const followersCount = followData?.followersCount ?? 0
-
 
     const likeMutation = useMutation({
         mutationFn: async () => {
@@ -328,12 +349,15 @@ export default function PinDetailPage() {
         if (!pin || isDownloading) return
         setIsDownloading(true)
 
+        const currentImg = pinImages[activeSlideIndex] || pinImages[0]
+        const downloadUrl = currentImg?.imageUrl || pin.imageUrl
         const rawName = (pin.title || 'pin').trim() || 'pin'
-        const ext = pin.imageUrl.split('.').pop()?.split('?')[0] || 'jpg'
-        const filename = `${rawName}.${ext}`
+        const suffix = pinImages.length > 1 ? `-${activeSlideIndex + 1}` : ''
+        const ext = downloadUrl.split('.').pop()?.split('?')[0] || 'jpg'
+        const filename = `${rawName}${suffix}.${ext}`
 
         try {
-            const res = await fetch(pin.imageUrl)
+            const res = await fetch(downloadUrl)
             if (!res.ok) throw new Error('خطا در دریافت تصویر')
 
             const blob = await res.blob()
@@ -351,7 +375,7 @@ export default function PinDetailPage() {
             console.error('خطا در دانلود:', error)
             try {
                 const link = document.createElement('a')
-                link.href = pin.imageUrl
+                link.href = downloadUrl
                 link.target = '_blank'
                 link.rel = 'noopener noreferrer'
                 link.download = filename
@@ -365,7 +389,6 @@ export default function PinDetailPage() {
             setIsDownloading(false)
         }
     }
-
 
     const toggleSave = () => {
         if (!user) {
@@ -400,7 +423,6 @@ export default function PinDetailPage() {
         setToast(message)
         setTimeout(() => setToast(''), 2000)
     }
-
 
     if (loading) {
         return <PinDetailSkeleton />
@@ -445,20 +467,13 @@ export default function PinDetailPage() {
                 <div className="bg-white/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-xl shadow-slate-200/50 ring-1 ring-black/5 overflow-hidden">
                     <div className="grid grid-cols-1 lg:grid-cols-2 items-stretch">
                         <div className="relative bg-gray-50/80 p-3 sm:p-4 md:p-5 flex items-center justify-center lg:border-l lg:border-gray-100">
-                            <div className="relative w-full group rounded-xl sm:rounded-2xl overflow-hidden shadow-lg ring-1 ring-black/5">
-                                <Image
-                                    src={pin.imageUrl}
-                                    alt={pin.title}
-                                    width={pin.imageWidth || 800}
-                                    height={pin.imageHeight || 1200}
-                                    sizes="(max-width:1021px) 100vw, 50vw"
-                                    priority
-                                    style={{ width: '100%', height: 'auto' }}
-                                    className="w-full max-h-[75vh] object-cover rounded-xl transition-transform duration-700 ease-out group-hover:scale-[1.02]"
+                            <div className="relative w-full group">
+                                <PinCarousel
+                                    images={pinImages}
+                                    title={pin.title}
+                                    variant="detail"
+                                    onActiveChange={handleSlideChange}
                                 />
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent p-4 pb-2 pt-12 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <p className="text-white font-bold text-sm truncate">{pin.title}</p>
-                                </div>
                             </div>
                         </div>
 
@@ -771,7 +786,6 @@ export default function PinDetailPage() {
                 </section>
             )}
 
-            {/* ✅ مودال هوشمند برای اکشن‌های محافظت‌شده */}
             {mounted && loginAction && (() => {
                 const config = ACTION_CONFIG[loginAction]
                 const ActionIcon = config.icon
@@ -788,10 +802,8 @@ export default function PinDetailPage() {
                             onClick={(e) => e.stopPropagation()}
                         >
 
-                            {/* نوار رنگی بالای مودال (بر اساس اکشن) */}
                             <div className={`h-1.5 w-full bg-gradient-to-r ${config.gradient}`} />
 
-                            {/* دکمه بستن */}
                             <button
                                 onClick={() => setLoginAction(null)}
                                 className="absolute top-5 left-4 w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 transition-colors cursor-pointer"
@@ -801,12 +813,10 @@ export default function PinDetailPage() {
                             </button>
 
                             <div className="p-6 text-center">
-                                {/* آیکون داینامیک */}
                                 <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl ${config.iconBg} flex items-center justify-center rotate-3`}>
                                     <ActionIcon className={`w-8 h-8 ${config.iconColor}`} />
                                 </div>
 
-                                {/* متن داینامیک */}
                                 <h3 className="text-lg font-extrabold text-gray-900 mb-2">
                                     {config.title}
                                 </h3>
@@ -814,7 +824,6 @@ export default function PinDetailPage() {
                                     {config.description}
                                 </p>
 
-                                {/* دکمه‌ها */}
                                 <div className="flex gap-3">
                                     <button
                                         onClick={() => setLoginAction(null)}

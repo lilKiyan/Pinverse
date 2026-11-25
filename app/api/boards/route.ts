@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-
 export async function GET() {
     try {
         const user = await getCurrentUser()
 
         if (!user) {
-            return NextResponse.json([])   // اگر لاگین نبود، لیست خالی
+            return NextResponse.json([])
         }
 
         const boards = await prisma.board.findMany({
@@ -23,7 +22,6 @@ export async function GET() {
             orderBy: { createdAt: 'desc' },
         })
 
-        // تبدیل saves به pins برای نمایش Cover
         const boardsWithPins = boards.map((board) => ({
             ...board,
             pins: board.saves.map((s) => s.pin),

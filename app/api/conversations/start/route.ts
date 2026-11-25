@@ -39,7 +39,6 @@ export async function POST(request: Request) {
             )
         }
 
-        // 🔍 بگرد دنبال conversation موجود
         let conversation = await prisma.conversation.findFirst({
             where: {
                 AND: [
@@ -49,7 +48,6 @@ export async function POST(request: Request) {
             },
         })
 
-        // ✨ فقط اگه وجود نداره، بسازش
         if (!conversation) {
             conversation = await prisma.conversation.create({
                 data: {
@@ -60,7 +58,6 @@ export async function POST(request: Request) {
             })
         }
 
-        // 📨 پیام اول رو بساز
         const message = await prisma.message.create({
             data: {
                 conversationId: conversation.id,
@@ -79,7 +76,6 @@ export async function POST(request: Request) {
             },
         })
 
-        // ⏱ updatedAt رو آپدیت کن
         await prisma.conversation.update({
             where: { id: conversation.id },
             data: { updatedAt: new Date() },

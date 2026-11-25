@@ -101,7 +101,6 @@ export default function AdminRoleModal({
                 className="relative w-full max-w-lg bg-white rounded-3xl p-6 sm:p-7 shadow-2xl ring-1 ring-black/10 space-y-5 animate-[scaleIn_0.2s_ease-out]"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* دکمه بستن */}
                 <button
                     onClick={onClose}
                     disabled={loading}
@@ -111,7 +110,6 @@ export default function AdminRoleModal({
                     <FiX className="w-4 h-4" />
                 </button>
 
-                {/* هدر مودال */}
                 <div className="flex items-center gap-3.5 pl-8">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-red-200 shrink-0">
                         <FiShield className="w-6 h-6" />
@@ -132,7 +130,6 @@ export default function AdminRoleModal({
                     </div>
                 )}
 
-                {/* انتخاب نقش‌ها */}
                 <div className="space-y-3 pt-1">
                     <label className="block text-xs font-bold text-gray-700">
                         نقش مورد نظر را انتخاب کنید:
@@ -192,7 +189,6 @@ export default function AdminRoleModal({
                     })}
                 </div>
 
-                {/* دکمه‌های تایید و انصراف */}
                 <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-gray-100">
                     <button
                         type="button"

@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-// دریافت لیست گفتگوهای کاربر
 export async function GET() {
     try {
         const user = await getCurrentUser()
@@ -51,11 +50,10 @@ export async function GET() {
         const formatted = await Promise.all(conversations.map(async (conv) => {
             const otherParticipant = conv.participants.find(p => p.userId !== user.id);
 
-            // شمارش پیام‌های نخوانده از طرف مقابل
             const unreadCount = await prisma.message.count({
                 where: {
                     conversationId: conv.id,
-                    senderId: otherParticipant?.userId,   // فرستنده طرف مقابل
+                    senderId: otherParticipant?.userId,
                     isRead: false,
                 },
             });
@@ -79,7 +77,6 @@ export async function GET() {
     }
 }
 
-// ایجاد یا یافتن گفتگو با کاربر دیگر
 export async function POST(request: Request) {
     try {
         const user = await getCurrentUser()
@@ -110,7 +107,6 @@ export async function POST(request: Request) {
             )
         }
 
-        // جستجوی گفتگوی موجود بین این دو کاربر
         const existingConversation = await prisma.conversation.findFirst({
             where: {
                 AND: [
@@ -142,7 +138,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ conversation: existingConversation })
         }
 
-        // ساخت گفتگوی جدید
         const newConversation = await prisma.conversation.create({
             data: {
                 participants: {

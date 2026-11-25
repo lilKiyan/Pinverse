@@ -1,5 +1,3 @@
-// Board Type
-
 export type BoardPinPreview = {
     id: string
     title: string

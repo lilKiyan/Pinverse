@@ -17,11 +17,10 @@ export async function DELETE(
             )
         }
 
-        // ✅ دو هدف در یک query: پیدا کردن + چک مالکیت
         const notification = await prisma.notification.findFirst({
             where: {
                 id,
-                userId: user.id,   // ضد-IDOR
+                userId: user.id,
             },
             select: { isRead: true },
         })
@@ -33,14 +32,11 @@ export async function DELETE(
             )
         }
 
-        // ✅ حذف + اصلاح شمارنده در یک تراکنش — فقط اگر نخوانده بود
-        // ✅ حذف + اصلاح شمارنده در یک تراکنش — فقط اگر نخوانده بود
         await prisma.$transaction(async (tx) => {
             await tx.notification.delete({
                 where: { id },
             })
 
-            // فقط اگر نخوانده بود → شمارنده کم می‌شود
             if (!notification.isRead) {
                 await tx.user.update({
                     where: { id: user.id },

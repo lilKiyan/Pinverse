@@ -16,11 +16,9 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url)
         const q = searchParams.get('q')?.trim() || ''
 
-        // ── ۱. چت‌های اخیر (به‌همراه آخرین پیام برای نمایش زمان) ──
         const conversations = await prisma.conversation.findMany({
             where: {
                 participants: { some: { userId: user.id } },
-                // فیلتر جستجو روی نام/یوزرنیم طرف مقابل — وقتی q هست
                 ...(q ? {
                     participants: {
                         some: {
@@ -51,11 +49,9 @@ export async function GET(request: Request) {
             },
         })
 
-        // ── ۲. فالوشده‌ها (بدون تکرار با چت‌ها) ──
         const followed = await prisma.follow.findMany({
             where: {
                 followerId: user.id,
-                // فیلتر جستجو
                 ...(q ? {
                     following: {
                         OR: [
@@ -75,7 +71,6 @@ export async function GET(request: Request) {
             },
         })
 
-        // ── ۳. ترکیب و تفکیک ──
         const chatTargets = conversations
             .map((conv) => {
                 const other = conv.participants.find((p) => p.userId !== user.id)
@@ -87,7 +82,7 @@ export async function GET(request: Request) {
 
         const followedTargets = followed
             .map((f) => f.following)
-            .filter((u) => !chatIds.has(u.id))   // حذف تکراری‌های سکشن چت
+            .filter((u) => !chatIds.has(u.id))
 
         return NextResponse.json({
             chats: chatTargets,

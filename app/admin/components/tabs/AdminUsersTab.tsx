@@ -67,9 +67,7 @@ export default function AdminUsersTab({
 
     return (
         <div>
-            {/* ── نوار فیلتر نقش‌ها، جستجو و خروجی CSV (Sub-Toolbar) ── */}
             <div className="border-b border-gray-100 bg-[#FAFAFB] px-4 sm:px-6 py-3.5 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3.5">
-                {/* جستجو و دکمه دانلود CSV */}
                 <div className="flex items-center gap-2.5 flex-1 max-w-xl">
                     <div className="relative flex-1 group">
                         <FiSearch className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 transition-colors group-focus-within:text-gray-900" />
@@ -103,7 +101,6 @@ export default function AdminUsersTab({
                     </button>
                 </div>
 
-                {/* دکمه‌های فیلتر نقش با درگ اسکرول روان */}
                 <div className="flex items-center gap-2 max-w-full overflow-hidden">
                     <span className="text-xs font-bold text-gray-500 flex items-center gap-1 shrink-0 ml-1">
                         <FiSliders className="h-3.5 w-3.5 text-gray-400" />
@@ -146,7 +143,6 @@ export default function AdminUsersTab({
                 </div>
             </div>
 
-            {/* لیست کاربران */}
             <div className="p-4 sm:p-5">
                 {isLoading ? (
                     <div className="space-y-3 animate-pulse">
@@ -260,7 +256,6 @@ export default function AdminUsersTab({
                                         </div>
 
                                         <div className="flex items-center gap-1.5 shrink-0">
-                                            {/* دکمه تغییر نقش */}
                                             <button
                                                 type="button"
                                                 onClick={() => onRoleModal(u)}
@@ -272,7 +267,6 @@ export default function AdminUsersTab({
                                                 <span className="hidden md:inline">نقش</span>
                                             </button>
 
-                                            {/* ویرایش کاربر */}
                                             <button
                                                 type="button"
                                                 onClick={() => onEditUser(u)}
@@ -283,7 +277,6 @@ export default function AdminUsersTab({
                                                 <FiEdit2 className="h-3.5 w-3.5" />
                                             </button>
 
-                                            {/* مسدودسازی/آزادسازی */}
                                             <button
                                                 type="button"
                                                 onClick={() => onBanUser(u.id, !u.banned)}
@@ -307,7 +300,6 @@ export default function AdminUsersTab({
                                                 </span>
                                             </button>
 
-                                            {/* حذف کامل کاربر */}
                                             <button
                                                 type="button"
                                                 onClick={() => onDeleteUser(u)}

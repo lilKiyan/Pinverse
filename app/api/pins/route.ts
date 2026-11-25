@@ -8,6 +8,23 @@ export const dynamic = 'force-dynamic'
 export const revalidate = 0
 export const fetchCache = 'force-no-store'
 
+const MAX_PIN_IMAGES = 6
+const ALLOWED_IMAGE_HOSTNAMES = ['res.cloudinary.com', 'images.unsplash.com']
+
+function isAllowedImageUrl(rawUrl: string): boolean {
+    try {
+        const parsedUrl = new URL(rawUrl)
+        return (
+            parsedUrl.protocol === 'https:' &&
+            ALLOWED_IMAGE_HOSTNAMES.some(
+                (h) => parsedUrl.hostname === h || parsedUrl.hostname.endsWith(`.${h}`)
+            )
+        )
+    } catch {
+        return false
+    }
+}
+
 export async function GET(request: Request) {
     try {
         const user = await getCurrentUser()
@@ -32,13 +49,10 @@ export async function GET(request: Request) {
             }
         }
 
-
         const reportedFilter = user
             ? { reports: { none: { reporterId: user.id } } }
             : {}
 
-        // دریافت یک پین بیشتر (limit + 1) تا بدون نیاز به count متوجه وجود صفحه بعد بشویم
-        // فقط پین‌های تایید شده (APPROVED) در فید عمومی نمایش داده می‌شوند
         const rawPins = await prisma.pin.findMany({
             where: {
                 AND: [reportedFilter, categoryFilter, { status: 'APPROVED' }],
@@ -47,7 +61,6 @@ export async function GET(request: Request) {
             skip,
             take: limit + 1,
             include: {
-                // فقط سیوهای خود این کاربر گرفته می‌شود نه همه سیوهای دیتابیس
                 saves: {
                     where: user ? { userId: user.id } : { userId: '__NONE__' },
                     include: {
@@ -58,6 +71,9 @@ export async function GET(request: Request) {
                 },
                 category: {                       
                     select: { slug: true, name: true, icon: true, color: true },
+                },
+                _count: {
+                    select: { images: true },
                 },
             },
         })
@@ -75,6 +91,7 @@ export async function GET(request: Request) {
                 imageUrl: pin.imageUrl,
                 imageWidth: pin.imageWidth,
                 imageHeight: pin.imageHeight,
+                imagesCount: Math.max(1, pin._count.images),
                 createdAt: pin.createdAt,
                 updatedAt: pin.updatedAt,
                 userId: pin.userId,
@@ -132,31 +149,69 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json()
-        const { title, description, imageUrl, imageWidth, imageHeight, boardId, category } = body   // ✅ category اضافه
+        const { title, description, imageUrl, imageWidth, imageHeight, boardId, category, images } = body
 
-        if (!title || !imageUrl || typeof imageUrl !== 'string') {
-            return NextResponse.json(
-                { error: 'عنوان و تصویر الزامی است' },
-                { status: 400 }
-            )
+        type IncomingImage = {
+            imageUrl: string
+            width?: number | null
+            height?: number | null
         }
 
-        // بررسی اعتبار امنیتی آدرس تصویر
-        try {
-            const parsedUrl = new URL(imageUrl)
-            const allowedHostnames = ['res.cloudinary.com', 'images.unsplash.com']
-            if (parsedUrl.protocol !== 'https:' || !allowedHostnames.some((h) => parsedUrl.hostname === h || parsedUrl.hostname.endsWith(`.${h}`))) {
+        let normalizedImages: {
+            imageUrl: string
+            width: number | null
+            height: number | null
+            sortOrder: number
+        }[] = []
+
+        if (Array.isArray(images) && images.length > 0) {
+            if (images.length > MAX_PIN_IMAGES) {
+                return NextResponse.json(
+                    { error: `حداکثر ${MAX_PIN_IMAGES} تصویر برای هر پین مجاز است` },
+                    { status: 400 }
+                )
+            }
+
+            for (let i = 0; i < images.length; i++) {
+                const item = images[i] as IncomingImage
+                if (!item || typeof item.imageUrl !== 'string' || !isAllowedImageUrl(item.imageUrl)) {
+                    return NextResponse.json(
+                        { error: 'آدرس یکی از تصاویر نامعتبر است. تصاویر باید از دامنه‌های معتبر بارگذاری شوند.' },
+                        { status: 400 }
+                    )
+                }
+                normalizedImages.push({
+                    imageUrl: item.imageUrl,
+                    width: typeof item.width === 'number' && Number.isFinite(item.width) ? Math.round(item.width) : null,
+                    height: typeof item.height === 'number' && Number.isFinite(item.height) ? Math.round(item.height) : null,
+                    sortOrder: i,
+                })
+            }
+        } else if (imageUrl && typeof imageUrl === 'string') {
+            if (!isAllowedImageUrl(imageUrl)) {
                 return NextResponse.json(
                     { error: 'آدرس تصویر نامعتبر است. تصویر باید از دامنه‌های معتبر بارگذاری شود.' },
                     { status: 400 }
                 )
             }
-        } catch {
+            normalizedImages = [
+                {
+                    imageUrl,
+                    width: typeof imageWidth === 'number' && Number.isFinite(imageWidth) ? Math.round(imageWidth) : null,
+                    height: typeof imageHeight === 'number' && Number.isFinite(imageHeight) ? Math.round(imageHeight) : null,
+                    sortOrder: 0,
+                },
+            ]
+        }
+
+        if (!title || typeof title !== 'string' || !title.trim() || normalizedImages.length === 0) {
             return NextResponse.json(
-                { error: 'فرمت آدرس تصویر نامعتبر است' },
+                { error: 'عنوان و حداقل یک تصویر الزامی است' },
                 { status: 400 }
             )
         }
+
+        const coverImage = normalizedImages[0]
 
         const titleModeration = moderateText(title.trim())
         if (!titleModeration.ok) {
@@ -181,7 +236,6 @@ export async function POST(request: Request) {
                 select: { id: true },
             }))?.id ?? null
 
-        // بررسی نقش کاربر: آیا مدیر یا ناظر است؟ پین مدیران مستقیماً منتشر می‌شود، بقیه در انتظار تایید قرار می‌گیرند
         const userRoles = await prisma.userRole.findMany({
             where: { userId: user.id },
             include: { role: true },
@@ -195,13 +249,21 @@ export async function POST(request: Request) {
             data: {
                 title: title.trim(),
                 description: description?.trim() || '',
-                imageUrl,
+                imageUrl: coverImage.imageUrl,
                 userId: user.id,
-                imageWidth: imageWidth ?? null,
-                imageHeight: imageHeight ?? null,
+                imageWidth: coverImage.width,
+                imageHeight: coverImage.height,
                 boardId: boardId || null,
                 categoryId,
                 status: initialStatus,
+                images: {
+                    create: normalizedImages,
+                },
+            },
+            include: {
+                images: {
+                    orderBy: { sortOrder: 'asc' },
+                },
             },
         })
 

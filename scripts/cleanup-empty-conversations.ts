@@ -3,7 +3,6 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  // 🔍 پیدا کن conversationهایی که هیچ پیامی ندارن
   const emptyConversations = await prisma.conversation.findMany({
     where: {
       messages: {
@@ -20,14 +19,12 @@ async function main() {
     return
   }
 
-  // 🗑 اول participants رو پاک کن
   await prisma.conversationParticipant.deleteMany({
     where: {
       conversationId: { in: emptyConversations.map((c) => c.id) },
     },
   })
 
-  // 🗑 بعد خود conversation رو
   await prisma.conversation.deleteMany({
     where: {
       id: { in: emptyConversations.map((c) => c.id) },

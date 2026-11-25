@@ -35,7 +35,6 @@ const SaveToBoardDropdown = ({
     const [isOpenVisible, setIsOpenVisible] = useState(false)
     const [query, setQuery] = useState('')
     const [align, setAlign] = useState<'left' | 'right'>('left')
-    // 🆕 بردی که همین لحظه تیک خورد — برای انیمیشن تأیید
     const [justToggledId, setJustToggledId] = useState<string | null>(null)
 
     const containerRef = useRef<HTMLDivElement>(null)

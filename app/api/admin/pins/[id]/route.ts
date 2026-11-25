@@ -44,7 +44,6 @@ export async function PATCH(
             },
         })
 
-        // ارسال اعلان به سازنده پین
         try {
             if (status === 'APPROVED' && pin.status !== 'APPROVED') {
                 await prisma.notification.create({

@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql" // از sqlite به postgresql تغییر بده
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -47,7 +47,7 @@ model Pin {
   imageWidth  Int?
   imageHeight Int?
   link        String?
-  status      String   @default("APPROVED") // PENDING | APPROVED | REJECTED
+  status      String   @default("APPROVED")
   rejectionReason String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -68,11 +68,27 @@ model Pin {
 
   sharedInMessages Message[]
 
+  images   PinImage[]
+
   categoryId String?
   category   Category? @relation(fields: [categoryId], references: [id])
 
   @@index([status, createdAt(sort: Desc)])
   @@index([userId, status])
+}
+
+model PinImage {
+  id        String   @id @default(cuid())
+  imageUrl  String
+  width     Int?
+  height    Int?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  pinId String
+  pin   Pin    @relation(fields: [pinId], references: [id], onDelete: Cascade)
+
+  @@index([pinId, sortOrder])
 }
 
 model Like {
@@ -177,7 +193,7 @@ model Report {
   id          String   @id @default(cuid())
   reason      String
   description String?
-  status      String   @default("pending") // pending | reviewed | resolved
+  status      String   @default("pending")
   createdAt   DateTime @default(now())
 
   pinId      String
@@ -190,14 +206,14 @@ model Report {
 
 model Notification {
   id        String   @id @default(cuid())
-  type      String // like | comment | follow | save
-  message   String // متن آماده فارسی
+  type      String
+  message   String
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
 
-  userId  String // گیرنده
+  userId  String
   user    User    @relation(fields: [userId], references: [id])
-  actorId String // انجام‌دهنده‌ی اکشن
+  actorId String
   actor   User    @relation("notificationActor", fields: [actorId], references: [id])
   pinId   String?
   pin     Pin?    @relation(fields: [pinId], references: [id])
@@ -208,7 +224,7 @@ model Notification {
 
 model Role {
   id          String           @id @default(cuid())
-  name        String           @unique // "admin" | "moderator" | "user"
+  name        String           @unique
   description String?
   users       UserRole[]
   permissions RolePermission[]
@@ -218,7 +234,7 @@ model Role {
 
 model Permission {
   id          String           @id @default(cuid())
-  key         String           @unique // "reports.view" | "users.ban" | "pins.delete"
+  key         String           @unique
   description String?
   roles       RolePermission[]
 

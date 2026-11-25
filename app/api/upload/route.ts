@@ -11,7 +11,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
-const MAX_SERVER_SIZE = 5 * 1024 * 1024   // 5MB
+const MAX_SERVER_SIZE = 5 * 1024 * 1024
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const rl = rateLimit(`upload_${user.id}_${getClientIp(request)}`, { limit: 10, windowMs: 600_000 })
+    const rl = rateLimit(`upload_${user.id}_${getClientIp(request)}`, { limit: 35, windowMs: 600_000 })
     if (!rl.ok) {
       return NextResponse.json(
         { error: `سقف آپلود پر شده. ${rl.retryAfter} ثانیه دیگر تلاش کنید` },
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     if (file.size > MAX_SERVER_SIZE) {
       return NextResponse.json(
         { error: 'حجم تصویر بیش از ۵ مگابایت است' },
-        { status: 413 }   // Payload Too Large
+        { status: 413 }
       )
     }
 

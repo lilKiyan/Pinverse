@@ -16,9 +16,7 @@ export async function POST(request: Request) {
         const body = await request.json().catch(() => ({}))
         const { id, unread } = body as { id?: string; unread?: boolean }
 
-        // ═══ حالت ۱: toggle تک‌نوتیف ═══
         if (id) {
-            // اول وضعیت فعلی رو بگیر — که بدونیم به کدوم سمت می‌ریم
             const current = await prisma.notification.findFirst({
                 where: { id, userId: user.id },
                 select: { isRead: true },
@@ -33,12 +31,11 @@ export async function POST(request: Request) {
 
             const newIsRead = unread ? false : !current.isRead
 
-            // آپدیت + شمارنده در یک تراکنش اتمیک
             const [, updatedUser] = await prisma.$transaction([
                 prisma.notification.updateMany({
                     where: {
                         id,
-                        userId: user.id,   // گارد مالکیت
+                        userId: user.id,
                     },
                     data: { isRead: newIsRead },
                 }),
@@ -46,8 +43,8 @@ export async function POST(request: Request) {
                     where: { id: user.id },
                     data: {
                         unreadNotifications: newIsRead
-                            ? { decrement: 1 }   // خوانده شد → کم
-                            : { increment: 1 },  // برگشت به نخوانده → زیاد
+                            ? { decrement: 1 }
+                            : { increment: 1 },
                     },
                 }),
             ])
@@ -58,7 +55,6 @@ export async function POST(request: Request) {
             })
         }
 
-        // ═══ حالت ۲: همه را خوانده کن ═══
         const result = await prisma.notification.updateMany({
             where: {
                 userId: user.id,
@@ -67,7 +63,6 @@ export async function POST(request: Request) {
             data: { isRead: true },
         })
 
-        // شمارنده دقیق = به تعداد واقعی تغییر یافته‌ها صفر می‌شود
         const updatedUser = await prisma.user.update({
             where: { id: user.id },
             data: { unreadNotifications: { decrement: result.count } },

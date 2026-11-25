@@ -47,7 +47,6 @@ export async function GET(request: Request) {
     }
 }
 
-// ── POST: رسیدگی به گزارش (حذف پین یا رد گزارش) ──
 export async function POST(request: Request) {
     try {
         const admin = await requireAdmin('reports.resolve')
@@ -80,7 +79,6 @@ export async function POST(request: Request) {
         }
 
         if (action === 'delete-pin') {
-            // ✅ حذف پین — با همان تراکنش کامل ۷ وابستگی (کپی امن از DELETE پین)
             await prisma.$transaction(async (tx) => {
                 await tx.report.deleteMany({ where: { pinId: report.pinId } })
                 await tx.notification.deleteMany({ where: { pinId: report.pinId } })
@@ -97,7 +95,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'پین حذف شد و گزارش‌ها بسته شدند' })
         }
 
-        // dismiss — فقط گزارش‌ها را بسته کند (پین می‌ماند)
         await prisma.report.updateMany({
             where: { pinId: report.pinId },
             data: { status: 'resolved' },

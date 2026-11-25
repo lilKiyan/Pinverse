@@ -11,7 +11,6 @@ export async function POST(
     try {
         const { id } = await params
 
-        // ── گارد لاگین ──
         const user = await getCurrentUser()
         if (!user) {
             return NextResponse.json(
@@ -20,7 +19,6 @@ export async function POST(
             )
         }
 
-        // ── چک وجود پین ──
         const pin = await prisma.pin.findUnique({
             where: { id },
             select: { id: true },
@@ -33,7 +31,6 @@ export async function POST(
             )
         }
 
-        // ── بدنه و ولیدیشن reason ──
         const body = await request.json()
         const { reason, description } = body
 
@@ -55,7 +52,6 @@ export async function POST(
             cleanDescription = description.trim()
         }
 
-        // ── چک گزارش تکراری (کلید مرکب از @@unique) ──
         const existingReport = await prisma.report.findUnique({
             where: {
                 reporterId_pinId: {
@@ -72,7 +68,6 @@ export async function POST(
             )
         }
 
-        // ── ساخت گزارش ──
         await prisma.report.create({
             data: {
                 pinId: id,
@@ -113,7 +108,7 @@ export async function DELETE(
         const deleted = await prisma.report.deleteMany({
             where: {
                 pinId: id,
-                reporterId: user.id,   // فقط گزارشِ خودش — نه بقیه!
+                reporterId: user.id,
             },
         })
 

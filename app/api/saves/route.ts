@@ -37,7 +37,6 @@ export async function POST(request: Request) {
             where: { id: boardId },
         })
 
-
         if (!board) {
             return NextResponse.json(
                 { error: 'برد یافت نشد' },
@@ -75,7 +74,6 @@ export async function POST(request: Request) {
             },
         })
 
-        // 🔔 نوتیف برای صاحب پین
         const targetPin = await prisma.pin.findUnique({
             where: { id: pinId },
             select: { userId: true, title: true },
@@ -118,7 +116,7 @@ export async function GET() {
                 board: true,
                 pin: {
                     include: {
-                        category: {                                   // ✅ از روی pin
+                        category: {
                             select: { slug: true, name: true, icon: true, color: true },
                         },
                     },
@@ -127,7 +125,6 @@ export async function GET() {
             orderBy: { createdAt: 'desc' },
         })
 
-        // گروه‌بندی بر اساس pinId
         const pinMap = new Map<string, any>()
 
         saves.forEach((save) => {
@@ -173,7 +170,6 @@ export async function GET() {
         )
     }
 }
-
 
 export async function DELETE(request: Request) {
     try {

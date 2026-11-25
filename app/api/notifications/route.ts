@@ -20,7 +20,6 @@ export async function GET(request: Request) {
             where: { userId: user.id },
             orderBy: { createdAt: 'desc' },
             take: 20,
-            // ✅ cursor pagination — بهینه‌تر از offset برای feed ها
             ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
             select: {
                 id: true,
@@ -29,7 +28,6 @@ export async function GET(request: Request) {
                 isRead: true,
                 createdAt: true,
                 pinId: true,
-                // actor — فقط ۴ فیلد سبک (UserMini)
                 actor: {
                     select: {
                         id: true,

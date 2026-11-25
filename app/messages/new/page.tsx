@@ -46,7 +46,6 @@ function NewConversationContent() {
     const [error, setError] = useState('')
     const inputRef = useRef<HTMLInputElement>(null)
 
-    // 📥 Fetch اطلاعات کاربر مقصد
     const { data: userData, isLoading: loadingUser } = useQuery<{
         user: OtherUser
         pins: any[]
@@ -63,7 +62,6 @@ function NewConversationContent() {
 
     const otherUser = userData?.user
 
-    // 🔍 چک کن اگه conversation موجوده، مستقیم برو بهش
     const { data: conversationsData } = useQuery<{ conversations: any[] }>({
         queryKey: ['conversations'],
         queryFn: async () => {
@@ -75,7 +73,6 @@ function NewConversationContent() {
         staleTime: 30 * 1000,
     })
 
-    // چک کردن conversation موجود
     useEffect(() => {
         if (!conversationsData?.conversations || !otherUser) return
 
@@ -88,7 +85,6 @@ function NewConversationContent() {
         }
     }, [conversationsData, otherUser, router])
 
-    // فوکوس روی input
     useEffect(() => {
         if (otherUser && inputRef.current) {
             inputRef.current.focus()
@@ -120,7 +116,6 @@ function NewConversationContent() {
             const data = await res.json()
             setNewMessage('')
 
-            // 🚀 برو به صفحه‌ی چت واقعی
             router.replace(`/messages/${data.conversationId}`)
         } catch (err) {
             setError(err instanceof Error ? err.message : 'خطا')
@@ -128,7 +123,6 @@ function NewConversationContent() {
         }
     }
 
-    // ── حالت‌های لودینگ/خطا ──
     if (checkingAuth && !currentUser) {
         return (
             <div className="h-full flex items-center justify-center">
@@ -158,7 +152,6 @@ function NewConversationContent() {
 
     return (
         <div className="h-full flex flex-col overflow-hidden bg-gradient-to-b from-gray-50 via-white to-red-50/30">
-            {/* ═══ هدر ═══ */}
             <header className="shrink-0 z-30 bg-white/85 backdrop-blur-xl border-b border-gray-100">
                 <div className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-3">
                     <button
@@ -197,10 +190,8 @@ function NewConversationContent() {
                 </div>
             </header>
 
-            {/* ═══ حالت خالی — خوش‌آمد ═══ */}
             <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 text-center">
 
-                {/* سلام تایپوگرافیک بزرگ */}
                 <div className="animate-[chatIn_0.55s_ease-out_both]">
                     <p className="text-xs font-bold text-red-500 tracking-widest uppercase mb-3">
                         پیام جدید
@@ -212,7 +203,6 @@ function NewConversationContent() {
                             <span className="bg-gradient-to-l from-red-600 to-rose-500 bg-clip-text text-transparent">
                                 گفتگو
                             </span>
-                            {/* خط دست‌کش زیر کلمه — با انیمیشن draw */}
                             <svg
                                 className="absolute -bottom-2 left-0 w-full h-2.5"
                                 viewBox="0 0 100 10"
@@ -233,7 +223,6 @@ function NewConversationContent() {
                     </h2>
                 </div>
 
-                {/* چیپ کاربر: آواتار + اسم — یه خط کم‌رنگ زیر تیتر */}
                 <div
                     className="mt-8 flex items-center gap-2.5 bg-white/80 backdrop-blur-sm ring-1 ring-gray-200/70 shadow-sm rounded-full p-1.5 pl-4 animate-[chatIn_0.55s_ease-out_0.2s_both]"
                 >
@@ -262,7 +251,6 @@ function NewConversationContent() {
 
             </div>
 
-            {/* ═══ فرم ارسال ═══ */}
             <footer className="shrink-0 z-30 bg-white/90 backdrop-blur-xl border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                 {error && (
                     <div className="max-w-2xl mx-auto px-4 pt-3">

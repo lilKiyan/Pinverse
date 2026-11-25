@@ -259,7 +259,6 @@ export default function SettingsPage() {
             dir="rtl"
             className="relative min-h-screen overflow-hidden bg-[#FAFAFB] px-4 sm:px-6 py-6 sm:py-8 pb-24 lg:pb-12"
         >
-            {/* هاله‌های لطیف پس‌زمینه */}
             <div
                 aria-hidden="true"
                 className="pointer-events-none absolute -top-28 right-1/4 h-72 w-72 rounded-full bg-rose-200/30 blur-3xl"

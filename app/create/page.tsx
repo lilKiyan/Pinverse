@@ -20,18 +20,34 @@ import {
     FiTrash2,
     FiRefreshCw,
     FiClock,
+    FiPlus,
+    FiChevronLeft,
+    FiChevronRight,
+    FiLayers,
+    FiStar,
 } from 'react-icons/fi'
 import { compressImage } from '@/lib/imageCompress'
 import { getCategoryIcon } from '@/lib/categories'
 import { useAuthStore } from '@/lib/authStore'
 import AuthGate from '../components/AuthGate'
 
+const MAX_PIN_IMAGES = 6
+
+type SelectedSlide = {
+    id: string
+    file: File
+    previewUrl: string
+    width: number
+    height: number
+    originalSize: number
+    compressedSize: number
+    wasCompressed: boolean
+}
+
 type CreatePinInput = {
     title: string
     description: string
-    file: File
-    width: number
-    height: number
+    slides: SelectedSlide[]
     category: string
 }
 
@@ -77,13 +93,12 @@ export default function CreatePage() {
 
     const [title, setTitle] = useState('')
     const [description, setDescription] = useState('')
-    const [selectedFile, setSelectedFile] = useState<File | null>(null)
-    const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null)
-    const [previewUrl, setPreviewUrl] = useState('')
+    const [slides, setSlides] = useState<SelectedSlide[]>([])
+    const [activeSlideIdx, setActiveSlideIdx] = useState(0)
+    const [uploadProgress, setUploadProgress] = useState<{ current: number; total: number } | null>(null)
     const [isPreparing, setIsPreparing] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
     const [submitError, setSubmitError] = useState('')
-    const [compressionInfo, setCompressionInfo] = useState<{ from: number; to: number } | null>(null)
     const [category, setCategory] = useState('other')
     const [createdPinResult, setCreatedPinResult] = useState<{
         id: string
@@ -91,28 +106,46 @@ export default function CreatePage() {
         status: string
     } | null>(null)
 
+    const slidesRef = useRef<SelectedSlide[]>([])
+    useEffect(() => {
+        slidesRef.current = slides
+    }, [slides])
+
     useEffect(() => {
         return () => {
-            if (previewUrl) URL.revokeObjectURL(previewUrl)
+            slidesRef.current.forEach((s) => URL.revokeObjectURL(s.previewUrl))
         }
-    }, [previewUrl])
+    }, [])
 
     const createPinMutation = useMutation({
-        mutationFn: async ({ title, description, file, width, height, category }: CreatePinInput) => {
-            const formData = new FormData()
-            formData.append('file', file)
+        mutationFn: async ({ title, description, slides: targetSlides, category }: CreatePinInput) => {
+            const uploadedImages: { imageUrl: string; width: number; height: number }[] = []
 
-            const uploadRes = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData,
-            })
+            for (let i = 0; i < targetSlides.length; i++) {
+                setUploadProgress({ current: i + 1, total: targetSlides.length })
+                const slide = targetSlides[i]
+                const formData = new FormData()
+                formData.append('file', slide.file)
 
-            if (!uploadRes.ok) {
-                const data = await uploadRes.json()
-                throw new Error(data.error || 'خطا در آپلود تصویر')
+                const uploadRes = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                })
+
+                if (!uploadRes.ok) {
+                    const data = await uploadRes.json()
+                    throw new Error(data.error || `خطا در آپلود تصویر ${i + 1}`)
+                }
+
+                const { imageUrl } = await uploadRes.json()
+                uploadedImages.push({
+                    imageUrl,
+                    width: slide.width,
+                    height: slide.height,
+                })
             }
 
-            const { imageUrl } = await uploadRes.json()
+            setUploadProgress(null)
 
             const pinRes = await fetch('/api/pins', {
                 method: 'POST',
@@ -120,9 +153,10 @@ export default function CreatePage() {
                 body: JSON.stringify({
                     title: title.trim(),
                     description: description.trim(),
-                    imageUrl,
-                    imageWidth: width,
-                    imageHeight: height,
+                    imageUrl: uploadedImages[0].imageUrl,
+                    imageWidth: uploadedImages[0].width,
+                    imageHeight: uploadedImages[0].height,
+                    images: uploadedImages,
                     category,
                 }),
             })
@@ -149,35 +183,67 @@ export default function CreatePage() {
                 })
             }
         },
+        onSettled: () => {
+            setUploadProgress(null)
+        },
     })
 
     const handleResetForm = () => {
         setTitle('')
         setDescription('')
-        setSelectedFile(null)
-        setDimensions(null)
-        if (previewUrl) URL.revokeObjectURL(previewUrl)
-        setPreviewUrl('')
-        setCompressionInfo(null)
+        slides.forEach((s) => URL.revokeObjectURL(s.previewUrl))
+        setSlides([])
+        setActiveSlideIdx(0)
+        setUploadProgress(null)
         setSubmitError('')
         setCreatedPinResult(null)
     }
 
-    const processFile = async (file: File) => {
-        if (!file.type.startsWith('image/')) {
+    const processFiles = async (fileList: FileList | File[]) => {
+        const incoming = Array.from(fileList)
+        if (incoming.length === 0) return
+
+        const remainingSlots = MAX_PIN_IMAGES - slides.length
+        if (remainingSlots <= 0) {
+            setSubmitError(`حداکثر ${MAX_PIN_IMAGES.toLocaleString('fa-IR')} تصویر برای هر پین مجاز است`)
+            return
+        }
+
+        const validImages = incoming.filter((f) => f.type.startsWith('image/'))
+        if (validImages.length === 0) {
             setSubmitError('لطفاً فقط فایل تصویری (PNG، JPG، WEBP یا GIF) انتخاب کنید')
             return
         }
 
-        setSubmitError('')
+        const filesToProcess = validImages.slice(0, remainingSlots)
+        if (validImages.length > remainingSlots) {
+            setSubmitError(`حداکثر ${MAX_PIN_IMAGES.toLocaleString('fa-IR')} تصویر مجاز است؛ ${remainingSlots.toLocaleString('fa-IR')} تصویر اول اضافه شد.`)
+        } else {
+            setSubmitError('')
+        }
+
         setIsPreparing(true)
         try {
-            const { file: compressed, width, height, wasCompressed } = await compressImage(file)
+            const prepared: SelectedSlide[] = []
+            for (const file of filesToProcess) {
+                const { file: compressed, width, height, wasCompressed } = await compressImage(file)
+                prepared.push({
+                    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                    file: compressed,
+                    previewUrl: URL.createObjectURL(compressed),
+                    width,
+                    height,
+                    originalSize: file.size,
+                    compressedSize: compressed.size,
+                    wasCompressed,
+                })
+            }
 
-            setSelectedFile(compressed)
-            setDimensions({ width, height })
-            setCompressionInfo(wasCompressed ? { from: file.size, to: compressed.size } : null)
-            setPreviewUrl(URL.createObjectURL(compressed))
+            setSlides((prev) => {
+                const next = [...prev, ...prepared]
+                setActiveSlideIdx(prev.length)
+                return next
+            })
         } catch (err) {
             setSubmitError(err instanceof Error ? err.message : 'خطا در پردازش تصویر')
         } finally {
@@ -186,10 +252,11 @@ export default function CreatePage() {
     }
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
+        const files = e.target.files
+        if (!files || files.length === 0) return
+        const copied = Array.from(files)
         e.target.value = ''
-        if (!file) return
-        await processFile(file)
+        await processFiles(copied)
     }
 
     const handleDragOver = (e: React.DragEvent) => {
@@ -205,28 +272,59 @@ export default function CreatePage() {
     const handleDrop = async (e: React.DragEvent) => {
         e.preventDefault()
         setIsDragging(false)
-        const file = e.dataTransfer.files?.[0]
-        if (file) await processFile(file)
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            await processFiles(e.dataTransfer.files)
+        }
     }
 
-    const handleRemoveFile = () => {
-        setSelectedFile(null)
-        setDimensions(null)
-        setPreviewUrl('')
-        setCompressionInfo(null)
+    const handleRemoveSlide = (index: number) => {
+        setSlides((prev) => {
+            const target = prev[index]
+            if (target) URL.revokeObjectURL(target.previewUrl)
+            const next = prev.filter((_, i) => i !== index)
+            setActiveSlideIdx((curr) => {
+                if (next.length === 0) return 0
+                if (curr >= next.length) return next.length - 1
+                if (index < curr) return curr - 1
+                return curr
+            })
+            return next
+        })
         setSubmitError('')
+    }
+
+    const handleMakeCover = (index: number) => {
+        if (index <= 0 || index >= slides.length) return
+        setSlides((prev) => {
+            const copy = [...prev]
+            const [picked] = copy.splice(index, 1)
+            copy.unshift(picked)
+            return copy
+        })
+        setActiveSlideIdx(0)
+    }
+
+    const handleMoveSlide = (fromIndex: number, direction: -1 | 1) => {
+        const toIndex = fromIndex + direction
+        if (toIndex < 0 || toIndex >= slides.length) return
+        setSlides((prev) => {
+            const copy = [...prev]
+            const temp = copy[fromIndex]
+            copy[fromIndex] = copy[toIndex]
+            copy[toIndex] = temp
+            return copy
+        })
+        setActiveSlideIdx(toIndex)
     }
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
-        if (!title.trim() || !selectedFile || !dimensions) return
+        if (!title.trim() || slides.length === 0) return
 
         createPinMutation.mutate({
             title: title.trim(),
             description: description.trim(),
-            file: selectedFile,
-            width: dimensions.width,
-            height: dimensions.height,
+            slides,
             category,
         })
     }
@@ -237,11 +335,12 @@ export default function CreatePage() {
         return `${(bytes / (1024 * 1024)).toFixed(1)} مگابایت`
     }
 
-    const savedPercent = compressionInfo
-        ? Math.max(1, Math.round((1 - compressionInfo.to / compressionInfo.from) * 100))
+    const activeSlide = slides[activeSlideIdx] || slides[0] || null
+    const savedPercent = activeSlide?.wasCompressed
+        ? Math.max(1, Math.round((1 - activeSlide.compressedSize / activeSlide.originalSize) * 100))
         : null
 
-    const hasImage = Boolean(selectedFile && dimensions)
+    const hasImage = slides.length > 0
     const hasTitle = Boolean(title.trim())
     const isFormValid = hasImage && hasTitle && !isPreparing
     const loading = createPinMutation.isPending
@@ -342,21 +441,24 @@ export default function CreatePage() {
 
                         <div className="grid grid-cols-1 lg:grid-cols-12">
                             <div className="lg:col-span-5 flex flex-col p-5 sm:p-6 border-b lg:border-b-0 lg:border-l border-gray-100">
-                                <div className="mb-3 flex items-center justify-between">
+                                <div className="mb-3 flex items-center justify-between gap-2">
                                     <span className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-800">
                                         <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                                            <FiImage className="h-3.5 w-3.5" />
+                                            <FiLayers className="h-3.5 w-3.5" />
                                         </span>
-                                        تصویر پین
+                                        تصاویر پین
                                         <span className="text-red-500">*</span>
+                                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-bold text-gray-500 tabular-nums">
+                                            {slides.length.toLocaleString('fa-IR')} / {MAX_PIN_IMAGES.toLocaleString('fa-IR')}
+                                        </span>
                                     </span>
 
-                                    {dimensions && (
+                                    {activeSlide && (
                                         <span
                                             className="rounded-full bg-gray-100 px-2.5 py-0.5 text-[11px] font-medium text-gray-500 tabular-nums"
                                             dir="ltr"
                                         >
-                                            {dimensions.width} × {dimensions.height}
+                                            {activeSlide.width} × {activeSlide.height}
                                         </span>
                                     )}
                                 </div>
@@ -365,11 +467,12 @@ export default function CreatePage() {
                                     ref={fileInputRef}
                                     type="file"
                                     accept="image/*"
+                                    multiple
                                     onChange={handleFileChange}
                                     className="hidden"
                                 />
 
-                                {previewUrl ? (
+                                {activeSlide ? (
                                     <div className="flex flex-1 flex-col gap-3">
                                         <div
                                             onDragOver={handleDragOver}
@@ -382,27 +485,40 @@ export default function CreatePage() {
                                             }`}
                                         >
                                             <img
-                                                src={previewUrl}
-                                                alt="پیش‌نمایش پین"
+                                                src={activeSlide.previewUrl}
+                                                alt={`پیش‌نمایش اسلاید ${activeSlideIdx + 1}`}
                                                 className="max-h-[340px] w-full object-contain"
                                             />
 
                                             <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-2">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => fileInputRef.current?.click()}
-                                                    className="flex items-center gap-1.5 rounded-full bg-gray-900/75 hover:bg-gray-900 backdrop-blur-md
-                                                        px-3 py-1.5 text-[11px] font-bold text-white shadow-md
-                                                        transition-all active:scale-95 cursor-pointer"
-                                                >
-                                                    <FiRefreshCw className="h-3 w-3" />
-                                                    تغییر تصویر
-                                                </button>
+                                                <div className="flex items-center gap-1.5">
+                                                    {activeSlideIdx === 0 ? (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/95 backdrop-blur-md px-2.5 py-1 text-[10px] font-black text-white shadow-md">
+                                                            <FiStar className="h-3 w-3" />
+                                                            کاور اصلی
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleMakeCover(activeSlideIdx)}
+                                                            className="inline-flex items-center gap-1 rounded-full bg-gray-900/75 hover:bg-amber-600 backdrop-blur-md px-2.5 py-1 text-[10px] font-bold text-white shadow-md transition-all cursor-pointer active:scale-95"
+                                                        >
+                                                            <FiStar className="h-3 w-3" />
+                                                            انتخاب به‌عنوان کاور
+                                                        </button>
+                                                    )}
+
+                                                    {slides.length > 1 && (
+                                                        <span className="rounded-full bg-black/55 backdrop-blur-md px-2.5 py-1 text-[10px] font-bold text-white tabular-nums">
+                                                            {(activeSlideIdx + 1).toLocaleString('fa-IR')} / {slides.length.toLocaleString('fa-IR')}
+                                                        </span>
+                                                    )}
+                                                </div>
 
                                                 <button
                                                     type="button"
-                                                    onClick={handleRemoveFile}
-                                                    aria-label="حذف تصویر"
+                                                    onClick={() => handleRemoveSlide(activeSlideIdx)}
+                                                    aria-label="حذف این تصویر"
                                                     className="flex h-8 w-8 items-center justify-center rounded-full
                                                         bg-white/90 hover:bg-red-600 text-gray-600 hover:text-white
                                                         backdrop-blur-md shadow-md ring-1 ring-black/5
@@ -412,25 +528,106 @@ export default function CreatePage() {
                                                 </button>
                                             </div>
 
+                                            {slides.length > 1 && (
+                                                <>
+                                                    {activeSlideIdx > 0 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setActiveSlideIdx((i) => Math.max(0, i - 1))}
+                                                            aria-label="اسلاید قبلی"
+                                                            className="absolute left-2.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 hover:bg-white text-gray-800 shadow-md ring-1 ring-black/10 transition-all cursor-pointer active:scale-90"
+                                                        >
+                                                            <FiChevronLeft className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                    {activeSlideIdx < slides.length - 1 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setActiveSlideIdx((i) => Math.min(slides.length - 1, i + 1))}
+                                                            aria-label="اسلاید بعدی"
+                                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 hover:bg-white text-gray-800 shadow-md ring-1 ring-black/10 transition-all cursor-pointer active:scale-90"
+                                                        >
+                                                            <FiChevronRight className="h-4 w-4" />
+                                                        </button>
+                                                    )}
+                                                </>
+                                            )}
+
                                             {isPreparing && (
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/80 backdrop-blur-sm">
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/80 backdrop-blur-sm z-10">
                                                     <span className="h-6 w-6 border-[3px] border-red-100 border-t-red-600 rounded-full animate-spin" />
-                                                    <span className="text-xs font-bold text-gray-700">در حال بهینه‌سازی...</span>
+                                                    <span className="text-xs font-bold text-gray-700">در حال بهینه‌سازی تصاویر...</span>
                                                 </div>
                                             )}
                                         </div>
 
-                                        {selectedFile && (
-                                            <div className="flex items-center gap-2.5 rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-gray-200/60">
+                                        <div
+                                            dir="ltr"
+                                            className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1.5 px-1.5"
+                                        >
+                                            {slides.map((s, idx) => {
+                                                const isActive = idx === activeSlideIdx
+                                                return (
+                                                    <div key={s.id} className="relative shrink-0 group/thumb">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setActiveSlideIdx(idx)}
+                                                            className={`relative h-14 w-14 overflow-hidden rounded-xl transition-all cursor-pointer block ${
+                                                                isActive
+                                                                    ? 'ring-2 ring-red-600 ring-offset-2 scale-[1.03]'
+                                                                    : 'opacity-70 hover:opacity-100 ring-1 ring-gray-200'
+                                                            }`}
+                                                        >
+                                                            <img
+                                                                src={s.previewUrl}
+                                                                alt={`اسلاید ${idx + 1}`}
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                            {idx === 0 && (
+                                                                <span className="absolute bottom-0 inset-x-0 bg-amber-500/90 text-[8px] font-black text-white text-center py-0.5">
+                                                                    کاور
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                handleRemoveSlide(idx)
+                                                            }}
+                                                            aria-label="حذف"
+                                                            className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-gray-900 text-white shadow-sm opacity-90 sm:opacity-0 sm:group-hover/thumb:opacity-100 transition-opacity cursor-pointer hover:bg-red-600"
+                                                        >
+                                                            <FiX className="h-3 w-3" />
+                                                        </button>
+                                                    </div>
+                                                )
+                                            })}
+
+                                            {slides.length < MAX_PIN_IMAGES && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    disabled={isPreparing}
+                                                    className="flex h-14 w-14 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/80 text-gray-500 hover:border-red-400 hover:bg-red-50/40 hover:text-red-600 transition-all cursor-pointer disabled:opacity-50"
+                                                >
+                                                    <FiPlus className="h-4 w-4" />
+                                                    <span className="text-[9px] font-bold">افزودن</span>
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="flex items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2 ring-1 ring-gray-200/60">
+                                            <div className="flex items-center gap-2.5 min-w-0">
                                                 <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-red-500 ring-1 ring-gray-200/80">
                                                     <FiFile className="h-4 w-4" />
                                                 </div>
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="truncate text-xs font-bold text-gray-800">
-                                                        {selectedFile.name}
+                                                <div className="min-w-0">
+                                                    <p className="truncate text-xs font-bold text-gray-800 max-w-[160px] sm:max-w-[200px]">
+                                                        {activeSlide.file.name}
                                                     </p>
                                                     <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px] text-gray-400 tabular-nums">
-                                                        <span>{formatFileSize(selectedFile.size)}</span>
+                                                        <span>{formatFileSize(activeSlide.compressedSize)}</span>
                                                         {savedPercent && (
                                                             <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200/70">
                                                                 {savedPercent.toLocaleString('fa-IR')}٪ سبک‌تر شد
@@ -439,7 +636,30 @@ export default function CreatePage() {
                                                     </div>
                                                 </div>
                                             </div>
-                                        )}
+
+                                            {slides.length > 1 && (
+                                                <div className="flex items-center gap-1 shrink-0" dir="ltr">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleMoveSlide(activeSlideIdx, -1)}
+                                                        disabled={activeSlideIdx === 0}
+                                                        title="انتقال به قبل"
+                                                        className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-100 disabled:opacity-35 cursor-pointer"
+                                                    >
+                                                        <FiChevronLeft className="h-3.5 w-3.5" />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleMoveSlide(activeSlideIdx, 1)}
+                                                        disabled={activeSlideIdx === slides.length - 1}
+                                                        title="انتقال به بعد"
+                                                        className="flex h-7 w-7 items-center justify-center rounded-lg bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-100 disabled:opacity-35 cursor-pointer"
+                                                    >
+                                                        <FiChevronRight className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 ) : (
                                     <button
@@ -466,11 +686,13 @@ export default function CreatePage() {
                                         </div>
 
                                         <span className="text-sm font-bold text-gray-800">
-                                            {isDragging ? 'تصویر را همین‌جا رها کن' : 'تصویر را بکش و رها کن یا کلیک کن'}
+                                            {isDragging
+                                                ? 'تصاویر را همین‌جا رها کن'
+                                                : 'یک یا چند تصویر بکش و رها کن یا کلیک کن'}
                                         </span>
 
                                         <span className="mt-1.5 text-xs text-gray-400">
-                                            به‌صورت خودکار برای بارگذاری سریع بهینه‌سازی می‌شود
+                                            تا {MAX_PIN_IMAGES.toLocaleString('fa-IR')} تصویر به‌صورت اسلایدر با بهینه‌سازی خودکار
                                         </span>
 
                                         <div className="mt-4 flex flex-wrap items-center justify-center gap-1.5">
@@ -483,14 +705,14 @@ export default function CreatePage() {
                                                 </span>
                                             ))}
                                             <span className="rounded-md bg-white px-2 py-0.5 text-[10px] font-medium text-gray-400 ring-1 ring-gray-200/70">
-                                                تا ۱۰MB
+                                                حداکثر {MAX_PIN_IMAGES.toLocaleString('fa-IR')} عکس
                                             </span>
                                         </div>
 
                                         {isPreparing && (
                                             <div className="mt-4 flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-red-600 shadow-xs ring-1 ring-red-100">
                                                 <span className="h-3.5 w-3.5 border-2 border-red-200 border-t-red-600 rounded-full animate-spin" />
-                                                در حال آماده‌سازی تصویر...
+                                                در حال آماده‌سازی تصاویر...
                                             </div>
                                         )}
                                     </button>
@@ -671,10 +893,15 @@ export default function CreatePage() {
                                             <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                                             آماده‌سازی...
                                         </>
+                                    ) : uploadProgress ? (
+                                        <>
+                                            <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                            آپلود تصویر {uploadProgress.current.toLocaleString('fa-IR')} از {uploadProgress.total.toLocaleString('fa-IR')}...
+                                        </>
                                     ) : loading ? (
                                         <>
                                             <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                            در حال انتشار...
+                                            در حال ثبت پین...
                                         </>
                                     ) : (
                                         <>
@@ -689,7 +916,6 @@ export default function CreatePage() {
                 </form>
             </div>
 
-            {/* ── مودال اعلام وضعیت انتظار تایید پین ── */}
             {createdPinResult && (
                 <div
                     className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/65 backdrop-blur-md p-4 animate-[fadeIn_0.2s_ease-out]"
@@ -698,7 +924,6 @@ export default function CreatePage() {
                         dir="rtl"
                         className="w-full max-w-md rounded-3xl bg-white p-6 sm:p-7 shadow-2xl ring-1 ring-black/5 animate-[scaleUp_0.25s_ease-out] text-center"
                     >
-                        {/* آیکون ساعت با انیمیشن ملایم */}
                         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-gradient-to-tr from-amber-500 to-amber-400 text-white shadow-xl shadow-amber-500/30">
                             <FiClock className="h-8 w-8 animate-pulse" />
                         </div>

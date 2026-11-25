@@ -85,7 +85,7 @@ export default function UpdatesPage() {
             const res = await fetch('/api/notifications/read', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({}),   // بدون id = همه
+                body: JSON.stringify({}),
             })
             if (!res.ok) throw new Error('خطا')
             return res.json() as Promise<{ markedCount: number; unreadCount: number }>
@@ -93,7 +93,7 @@ export default function UpdatesPage() {
         onSuccess: (data) => {
             queryClient.setQueryData<{ count: number }>(
                 ['notifications-count', user?.id],
-                { count: data.unreadCount }   // معمولاً ۰
+                { count: data.unreadCount }
             )
         },
         onError: () => {

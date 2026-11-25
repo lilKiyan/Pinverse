@@ -11,7 +11,6 @@ import {
     normalizeUsername,
 } from '@/lib/validations'
 
-
 async function guardTarget(
     admin: { id: string },
     targetId: string,
@@ -87,7 +86,6 @@ export async function PATCH(
             newPassword?: string
         }
 
-        // ── داده‌های آپدیت — فقط فیلدهایی که واقعاً اومدن ──
         const data: {
             name?: string
             username?: string
@@ -112,7 +110,6 @@ export async function PATCH(
 
             const normalized = normalizeUsername(username)
 
-            // چک یکتا بودن — با کاربران دیگر
             const taken = await prisma.user.findFirst({
                 where: {
                     username: { equals: normalized, mode: 'insensitive' },
@@ -139,10 +136,9 @@ export async function PATCH(
         }
 
         if (avatar !== undefined) {
-            data.avatar = avatar   // از آپلودر خود پنل می‌آید (URL کلاودینری)
+            data.avatar = avatar
         }
 
-        // ── پسورد موقت — هش می‌شود، هرگز plain ذخیره نمی‌شود ──
         if (newPassword !== undefined && newPassword !== '') {
             const passwordError = validatePassword(newPassword)
             if (passwordError) {
@@ -175,7 +171,6 @@ export async function PATCH(
     }
 }
 
-
 export async function DELETE(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
@@ -196,7 +191,6 @@ export async function DELETE(
         const guard = await guardTarget(admin, id, { allowAdminTarget: true })
         if (guard instanceof NextResponse) return guard
 
-        // 🛡️ گارد اکانت دمو — محافظت از رزومه!
         const demoUserId = process.env.DEMO_USER_ID
         if (demoUserId && id === demoUserId) {
             return NextResponse.json(
@@ -205,7 +199,6 @@ export async function DELETE(
             )
         }
 
-        // Pre-fetch related IDs concurrently before opening transaction
         const [userPins, userBoards, userConversations] = await Promise.all([
             prisma.pin.findMany({
                 where: { userId: id },
@@ -227,7 +220,6 @@ export async function DELETE(
 
         await prisma.$transaction(
             async (tx) => {
-                // ۱. پیام‌هایی که پین کاربر در آن‌ها شیر شده
                 if (pinIds.length > 0) {
                     await tx.message.updateMany({
                         where: { pinId: { in: pinIds } },
@@ -235,7 +227,6 @@ export async function DELETE(
                     })
                 }
 
-                // ۲. اعلان‌های مربوط به پین‌های کاربر یا خود کاربر
                 await tx.notification.deleteMany({
                     where: {
                         OR: [
@@ -246,7 +237,6 @@ export async function DELETE(
                     },
                 })
 
-                // ۳. گزارش‌ها (ریپورت روی پین‌های کاربر یا ریپورت‌های ثبت‌شده توسط کاربر)
                 await tx.report.deleteMany({
                     where: {
                         OR: [
@@ -256,7 +246,6 @@ export async function DELETE(
                     },
                 })
 
-                // ۴. لایک‌ها (روی پین‌های کاربر یا لایک‌های ثبت‌شده توسط کاربر)
                 await tx.like.deleteMany({
                     where: {
                         OR: [
@@ -266,7 +255,6 @@ export async function DELETE(
                     },
                 })
 
-                // ۵. کامنت‌ها (روی پین‌های کاربر یا کامنت‌های نوشته‌شده توسط کاربر)
                 await tx.comment.deleteMany({
                     where: {
                         OR: [
@@ -276,7 +264,6 @@ export async function DELETE(
                     },
                 })
 
-                // ۶. سیوها (پین‌های کاربر، بردهای کاربر، یا سیوهای انجام‌شده توسط کاربر)
                 await tx.save.deleteMany({
                     where: {
                         OR: [
@@ -287,7 +274,6 @@ export async function DELETE(
                     },
                 })
 
-                // ۷. حذف ارتباط پین‌های دیگران که در بردهای این کاربر بوده‌اند
                 if (boardIds.length > 0) {
                     await tx.pin.updateMany({
                         where: { boardId: { in: boardIds } },
@@ -295,18 +281,14 @@ export async function DELETE(
                     })
                 }
 
-                // ۸. پین‌های خود کاربر
                 await tx.pin.deleteMany({ where: { userId: id } })
 
-                // ۹. بردهای خود کاربر
                 await tx.board.deleteMany({ where: { userId: id } })
 
-                // ۱۰. فالوورها و فالووینگ‌ها
                 await tx.follow.deleteMany({
                     where: { OR: [{ followerId: id }, { followingId: id }] },
                 })
 
-                // ۱۱. گفتگوها و پیام‌های کاربر
                 if (convIds.length > 0) {
                     await tx.message.deleteMany({ where: { conversationId: { in: convIds } } })
                     await tx.conversationParticipant.deleteMany({ where: { conversationId: { in: convIds } } })
@@ -315,10 +297,8 @@ export async function DELETE(
                 await tx.message.deleteMany({ where: { senderId: id } })
                 await tx.conversationParticipant.deleteMany({ where: { userId: id } })
 
-                // ۱۲. نقش‌های کاربر
                 await tx.userRole.deleteMany({ where: { userId: id } })
 
-                // ۱۳. در نهایت حذف خود کاربر
                 await tx.user.delete({ where: { id } })
             },
             {

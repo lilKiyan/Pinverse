@@ -1,6 +1,5 @@
 "use client"
 
-// نسبت‌های واقعی و متغیر کارت‌های پینترست برای ایجاد افکت میسونری طبیعی
 const CARD_ASPECT_RATIOS = [
     'aspect-[3/4]',
     'aspect-[2/3]',
@@ -37,15 +36,12 @@ export default function PinGridSkeleton({ count = 12, className = '' }: PinGridS
                         key={index}
                         className="group relative break-inside-avoid mb-4 animate-[fadeIn_0.4s_ease-out]"
                     >
-                        {/* تصویر کارت با انیمیشن نوری ملایم */}
                         <div
                             className={`w-full rounded-[15px] overflow-hidden skeleton-shimmer ring-1 ring-black/5 ${aspect}`}
                         >
-                            {/* بج دسته‌بندی فرضی در بالا */}
                             <div className="absolute top-2.5 right-2.5 w-14 h-4 rounded-full bg-white/60 backdrop-blur-sm" />
                         </div>
 
-                        {/* اطلاعات پایین کارت (نام برد یا کاربر) */}
                         <div className="mt-2 px-1 flex items-center justify-between gap-2">
                             <div className="flex items-center gap-1.5 flex-1 min-w-0">
                                 <div className="w-3.5 h-3.5 rounded-full bg-gray-200 shrink-0" />

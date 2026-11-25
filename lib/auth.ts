@@ -1,9 +1,7 @@
-// lib/auth.ts
 import { cookies } from 'next/headers'
 import { prisma } from './prisma'
 import bcrypt from 'bcryptjs'
 import { verifyToken, COOKIE_NAME } from './jwt'
-
 
 export { signToken, verifyToken, COOKIE_NAME } from './jwt'
 
@@ -47,6 +45,6 @@ export async function getCurrentUser() {
         return cleanUser
     } catch (error) {
         console.error('getCurrentUser error:', error)
-        return null  // ✅ به جای کرش، null برگردون
+        return null
     }
 }

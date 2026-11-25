@@ -64,7 +64,6 @@ export default function Home() {
     queryClient.removeQueries({ queryKey: ['pins'] })
   }, [queryClient])
 
-  // ── IntersectionObserver برای infinite scroll ──
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {

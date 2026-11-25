@@ -64,6 +64,16 @@ export async function GET(request: Request) {
                             icon: true,
                         },
                     },
+                    images: {
+                        orderBy: { sortOrder: 'asc' },
+                        select: {
+                            id: true,
+                            imageUrl: true,
+                            width: true,
+                            height: true,
+                            sortOrder: true,
+                        },
+                    },
                     _count: {
                         select: {
                             likes: true,

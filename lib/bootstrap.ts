@@ -1,7 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
-// ── تعریف دسترسی‌های اتمیک ──
 export const PERMISSIONS = [
     { key: 'reports.view', description: 'مشاهده لیست گزارش‌ها' },
     { key: 'reports.resolve', description: 'رسیدگی/بستن گزارش‌ها' },
@@ -14,7 +13,6 @@ export const PERMISSIONS = [
     { key: 'categories.manage', description: 'مدیریت دسته‌بندی‌ها' },
 ] as const
 
-// ── تعریف نقش‌ها و دسترسی‌های هر کدام ──
 export const ROLES = [
     {
         name: 'admin',
@@ -48,16 +46,11 @@ export const CATEGORIES_SEED = [
     { slug: 'other', name: 'سایر', icon: 'other', color: '#9ca3af', sortOrder: 99 },
 ]
 
-/**
- * راه‌اندازی اولیه سیستم (RBAC، دسته‌بندی‌ها و کاربر ادمین پیش‌فرض)
- * به‌صورت ایمن و Idempotent اجرا می‌شود و در صورت وجود ادمین قبلی، حساب جدیدی نمی‌سازد.
- */
 export async function seedDatabase(prisma: PrismaClient, options?: { log?: boolean }) {
     const log = options?.log ?? false
 
     if (log) console.log('🌱 Seeding RBAC system...')
 
-    // ۱. ساخت Permission ها
     const permissionMap = new Map<string, string>()
     for (const perm of PERMISSIONS) {
         const record = await prisma.permission.upsert({
@@ -69,7 +62,6 @@ export async function seedDatabase(prisma: PrismaClient, options?: { log?: boole
         if (log) console.log(`  ✅ permission: ${perm.key}`)
     }
 
-    // ۲. ساخت Role ها و اتصال دسترسی‌ها
     let adminRoleId: string | null = null
     let userRoleId: string | null = null
 
@@ -105,7 +97,6 @@ export async function seedDatabase(prisma: PrismaClient, options?: { log?: boole
         if (log) console.log(`  ✅ role: ${role.name} (${keys.length} permissions)`)
     }
 
-    // ۳. اطمینان از داشتن نقش "user" برای کاربران بدون نقش
     if (userRoleId) {
         const orphans = await prisma.user.findMany({
             where: { roles: { none: {} } },
@@ -123,7 +114,6 @@ export async function seedDatabase(prisma: PrismaClient, options?: { log?: boole
         }
     }
 
-    // ۴. ساخت دسته‌بندی‌های پیش‌فرض
     for (const cat of CATEGORIES_SEED) {
         await prisma.category.upsert({
             where: { slug: cat.slug },
@@ -138,7 +128,6 @@ export async function seedDatabase(prisma: PrismaClient, options?: { log?: boole
         if (log) console.log(`  ✅ category: ${cat.name}`)
     }
 
-    // ۵. ساخت حساب مدیر پیش‌فرض (admin / admin) در صورتی که هنوز هیچ مدیری وجود نداشته باشد
     if (adminRoleId) {
         const existingAdminCount = await prisma.userRole.count({
             where: { roleId: adminRoleId },

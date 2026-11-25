@@ -42,7 +42,6 @@ export async function POST(request: Request) {
             },
         })
 
-        // در دیتابیس کاملاً تازه (بدون هیچ کاربری)، هنگام ورود با admin راه‌اندازی اولیه به‌صورت خودکار انجام می‌شود
         if (
             !user &&
             (normalizedIdentifier === 'admin' || normalizedIdentifier === 'admin@pinverse.ir')

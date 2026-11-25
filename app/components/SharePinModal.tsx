@@ -203,7 +203,6 @@ export default function SharePinModal({
                 onClick={(e) => e.stopPropagation()}
             >
 
-                {/* ═══ هدر ═══ */}
                 <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
                     <div className="flex items-center gap-2.5">
                         <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
@@ -220,7 +219,6 @@ export default function SharePinModal({
                     </button>
                 </div>
 
-                {/* ═══ پیش‌نمایش پین + کپی لینک ═══ */}
                 <div className="px-5 py-4 flex items-center gap-3 bg-gradient-to-l from-red-50/60 to-transparent border-b border-gray-50">
                     <div className="relative w-12 h-12 rounded-xl overflow-hidden ring-1 ring-black/5 shrink-0 bg-gray-100">
                         <Image
@@ -254,7 +252,6 @@ export default function SharePinModal({
                     </button>
                 </div>
 
-                {/* ═══ جستجو ═══ */}
                 <div className="px-5 pt-4 pb-2">
                     <div className="relative">
                         <FiSearch className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
@@ -269,14 +266,12 @@ export default function SharePinModal({
                     </div>
                 </div>
 
-                {/* ═══ خطا ═══ */}
                 {error && (
                     <div className="mx-5 mb-2 bg-red-50 border border-red-200 text-red-600 px-4 py-2.5 rounded-xl text-sm">
                         {error}
                     </div>
                 )}
 
-                {/* ═══ لیست مخاطبین ═══ */}
                 <div className="max-h-[320px] overflow-y-auto px-2 pb-3
                     [&::-webkit-scrollbar]:w-1.5
                     [&::-webkit-scrollbar-thumb]:bg-gray-200
@@ -288,7 +283,6 @@ export default function SharePinModal({
                             <div className="w-6 h-6 border-[3px] border-gray-200 border-t-red-500 rounded-full animate-spin" />
                         </div>
                     ) : isSearching ? (
-                        /* ── حالت جستجو: ترکیب دو لیست ── */
                         <>
                             <SectionTitle icon={<FiUsers className="w-3 h-3" />} label="نتایج" />
                             {chats.length + followed.length === 0 ? (
@@ -303,7 +297,6 @@ export default function SharePinModal({
                             )}
                         </>
                     ) : (
-                        /* ── حالت عادی: دو سکشن ── */
                         <>
                             {chats.length > 0 && (
                                 <>
@@ -343,7 +336,6 @@ export default function SharePinModal({
     return createPortal(modalContent, document.body)
 }
 
-// ── کامپوننت کوچک: عنوان سکشن ──
 function SectionTitle({ icon, label }: { icon: React.ReactNode; label: string }) {
     return (
         <div className="flex items-center gap-2 px-4 pt-3 pb-1.5">

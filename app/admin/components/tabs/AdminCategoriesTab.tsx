@@ -41,7 +41,6 @@ export default function AdminCategoriesTab({
 
     return (
         <div>
-            {/* ── نوار فیلتر و جستجوی دسته‌بندی‌ها (Sub-Toolbar) ── */}
             <div className="border-b border-gray-100 bg-[#FAFAFB] px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                     <span className="text-xs font-bold text-gray-700">
@@ -85,7 +84,6 @@ export default function AdminCategoriesTab({
                 </div>
             </div>
 
-            {/* گرید دسته‌بندی‌ها */}
             <div className="p-4 sm:p-5">
                 {isLoading ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-pulse">

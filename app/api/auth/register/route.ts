@@ -31,7 +31,6 @@ export async function POST(request: Request) {
         const body = await request.json()
         const { email, username, name, password } = body
 
-        // ─── اعتبارسنجی ───
         const emailError = validateEmail(email)
         if (emailError) return NextResponse.json({ error: emailError, field: 'email' }, { status: 400 })
 
@@ -44,11 +43,9 @@ export async function POST(request: Request) {
         const passwordError = validatePassword(password)
         if (passwordError) return NextResponse.json({ error: passwordError, field: 'password' }, { status: 400 })
 
-        // ─── نرمال‌سازی ───
         const normalizedEmail = normalizeEmail(email)
         const normalizedUsername = normalizeUsername(username)
 
-        // ─── چک تکراری بودن (case-insensitive با PostgreSQL) ───
         const existingUser = await prisma.user.findFirst({
             where: {
                 OR: [
@@ -72,7 +69,6 @@ export async function POST(request: Request) {
             )
         }
 
-        // ─── هش و ساخت کاربر ───
         const hashedPassword = await hashPassword(password)
 
         const newUser = await prisma.user.create({
@@ -84,7 +80,6 @@ export async function POST(request: Request) {
             },
         })
 
-        // ─── ساخت توکن و ست کوکی ───
         const token = await signToken(newUser.id)
         const cookieStore = await cookies()
         cookieStore.set(COOKIE_NAME, token, {

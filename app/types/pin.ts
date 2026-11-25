@@ -11,6 +11,14 @@ export type CategoryInfo = {
     color: string
 }
 
+export type PinImageDTO = {
+    id: string
+    imageUrl: string
+    width: number | null
+    height: number | null
+    sortOrder: number
+}
+
 export type PinDTO = {
     id: string
     title: string
@@ -18,6 +26,8 @@ export type PinDTO = {
     imageUrl: string
     imageWidth: number | null
     imageHeight: number | null
+    images?: PinImageDTO[]
+    imagesCount?: number
     userId: string
     createdAt: string
     isReportedByMe?: boolean

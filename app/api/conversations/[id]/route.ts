@@ -42,7 +42,6 @@ export async function GET(
             )
         }
 
-        // بررسی عضویت کاربر
         const isParticipant = conversation.participants.some(
             (p) => p.userId === user.id
         )
@@ -53,7 +52,6 @@ export async function GET(
             )
         }
 
-        // یافتن کاربر مقابل
         const otherParticipant = conversation.participants.find(
             (p) => p.userId !== user.id
         )

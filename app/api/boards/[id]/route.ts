@@ -14,7 +14,13 @@ export async function GET(
             where: { id },
             include: {
                 saves: {
-                    include: { pin: true },
+                    include: {
+                        pin: {
+                            include: {
+                                _count: { select: { images: true } },
+                            },
+                        },
+                    },
                     orderBy: { createdAt: 'desc' },
                 },
             },
@@ -27,7 +33,6 @@ export async function GET(
             )
         }
 
-        // اگر برد خصوصی است و کاربر لاگین نیست یا مالک نیست
         if (board.isPrivate && board.userId !== user?.id) {
             return NextResponse.json(
                 { error: 'به این برد دسترسی ندارید' },
@@ -35,7 +40,6 @@ export async function GET(
             )
         }
 
-        // ساختار جدید: هر پین دارای savedBoards است
         const pins = board.saves.map((save) => ({
             id: save.pin.id,
             title: save.pin.title,
@@ -43,11 +47,12 @@ export async function GET(
             imageHeight: save.pin.imageHeight,
             description: save.pin.description,
             imageUrl: save.pin.imageUrl,
+            imagesCount: Math.max(1, save.pin._count.images),
             createdAt: save.pin.createdAt,
             updatedAt: save.pin.updatedAt,
             userId: save.pin.userId,
             isOwner: user ? save.pin.userId === user.id : false,
-            isSavedByMe: true, // چون داخل همین برد است
+            isSavedByMe: true,
             savedBoards: [
                 {
                     boardId: board.id,
@@ -147,10 +152,8 @@ export async function DELETE(
             )
         }
 
-        // حذف ذخیره‌های مربوط به برد
         await prisma.save.deleteMany({ where: { boardId: id } })
 
-        // حذف خود برد
         await prisma.board.delete({ where: { id } })
 
         return NextResponse.json({ message: 'برد حذف شد' })

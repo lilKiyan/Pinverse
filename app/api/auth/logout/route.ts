@@ -9,8 +9,6 @@ export const fetchCache = 'force-no-store'
 export async function POST() {
     const cookieStore = await cookies()
 
-    // ✅ استفاده از set با maxAge: 0 برای پاک کردن مطمئن‌تر
-    // (delete گاهی روی production با path/domain mismatch کار نمی‌کنه)
     cookieStore.set(COOKIE_NAME, '', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
